@@ -15,6 +15,8 @@ export const EXPERTISE_OPTIONS = [
     "Copywriting",
     "Marketing Strategy",
     "Project Management",
+    "SEO Specialist",
+    "Mobile App Developer"
 ] as const;
 
 export type Expertise = (typeof EXPERTISE_OPTIONS)[number];

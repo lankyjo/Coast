@@ -23,11 +23,15 @@ import {
 import { inviteMember } from "@/actions/invite.actions";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { EXPERTISE_OPTIONS } from "@/constants/expertise";
+
+import { MultiSelect } from "@/components/ui/multi-select";
 
 export function InviteMemberDialog() {
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState("");
     const [role, setRole] = useState<"admin" | "member">("member");
+    const [expertise, setExpertise] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleInvite = async (e: React.FormEvent) => {
@@ -35,7 +39,7 @@ export function InviteMemberDialog() {
         setIsLoading(true);
 
         try {
-            const result = await inviteMember({ email, role });
+            const result = await inviteMember({ email, role, expertise });
 
             if (result.error) {
                 toast.error(result.error);
@@ -44,6 +48,7 @@ export function InviteMemberDialog() {
                 setOpen(false);
                 setEmail("");
                 setRole("member");
+                setExpertise([]); // access empty array
             }
         } catch (error) {
             toast.error("Failed to send invitation");
@@ -100,6 +105,22 @@ export function InviteMemberDialog() {
                                     <SelectItem value="admin">Admin</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="expertise" className="text-right">
+                                Expertise
+                            </Label>
+                            <div className="col-span-3">
+                                <MultiSelect
+                                    options={EXPERTISE_OPTIONS.map((opt) => ({
+                                        label: opt,
+                                        value: opt,
+                                    }))}
+                                    selected={expertise}
+                                    onChange={setExpertise}
+                                    placeholder="Select expertise"
+                                />
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>

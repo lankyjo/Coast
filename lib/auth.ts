@@ -17,9 +17,9 @@ export const auth = betterAuth({
     user: {
         additionalFields: {
             expertise: {
-                type: "string",
+                type: "string[]", // Attempting array support
                 required: false,
-                defaultValue: "",
+                defaultValue: [],
                 input: true,
             },
             role: {

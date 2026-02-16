@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IInvitation extends Document {
     email: string;
     role: "admin" | "member";
+    expertise?: string[]; // Changed from string to string[]
     token: string;
     invitedBy: mongoose.Types.ObjectId;
     status: "pending" | "accepted" | "expired";
@@ -15,6 +16,7 @@ const InvitationSchema = new Schema<IInvitation>(
     {
         email: { type: String, required: true, trim: true, lowercase: true },
         role: { type: String, enum: ["admin", "member"], default: "member" },
+        expertise: { type: [String], required: false }, // Changed to array of strings
         token: { type: String, required: true, unique: true },
         invitedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
         status: {

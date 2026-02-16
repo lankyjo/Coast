@@ -19,12 +19,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, UserCog, MailX } from "lucide-react";
+import { MoreHorizontal, Trash2, UserCog, MailX, Briefcase } from "lucide-react";
 import { updateMemberRole, removeMember } from "@/actions/admin.actions";
 import { revokeInvitation } from "@/actions/invite.actions";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
+import { UpdateExpertiseDialog } from "./UpdateExpertiseDialog";
 
 interface User {
     _id: string;
@@ -33,6 +34,7 @@ interface User {
     role: "admin" | "member";
     image?: string;
     createdAt: string;
+    expertise?: string | string[];
 }
 
 interface Invitation {
@@ -42,6 +44,7 @@ interface Invitation {
     status: "pending" | "accepted";
     createdAt: string;
     expiresAt: string;
+    expertise?: string | string[];
 }
 
 interface MembersListProps {
@@ -50,9 +53,10 @@ interface MembersListProps {
 }
 
 export function MembersList({ initialMembers, initialInvitations }: MembersListProps) {
-    // We rely on server actions to revalidate path, so local state updates might be overridden by router refresh.
-    // However, optimistic updates are nice. For simplicity, we just trigger action and toast.
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [updateExpertiseOpen, setUpdateExpertiseOpen] = useState(false);
 
+    // ... handlers ...
     const handleRoleChange = async (userId: string, newRole: "admin" | "member") => {
         const result = await updateMemberRole(userId, newRole);
         if (result.error) {
@@ -82,6 +86,22 @@ export function MembersList({ initialMembers, initialInvitations }: MembersListP
         }
     };
 
+    const formatExpertise = (expertise?: string | string[]) => {
+        if (!expertise) return null;
+        if (Array.isArray(expertise)) {
+            if (expertise.length === 0) return null;
+            if (expertise.length === 1) return expertise[0];
+            return `${expertise[0]} +${expertise.length - 1}`;
+        }
+        return expertise;
+    };
+
+    const getExpertiseArray = (expertise?: string | string[]): string[] => {
+        if (!expertise) return [];
+        if (Array.isArray(expertise)) return expertise;
+        return [expertise];
+    };
+
     return (
         <div className="space-y-6">
             <div className="rounded-md border">
@@ -105,6 +125,11 @@ export function MembersList({ initialMembers, initialInvitations }: MembersListP
                                     <div className="flex flex-col">
                                         <span className="font-medium">{member.name}</span>
                                         <span className="text-xs text-muted-foreground">{member.email}</span>
+                                        {member.expertise && (
+                                            <span className="text-[10px] text-blue-600 font-medium">
+                                                {formatExpertise(member.expertise)}
+                                            </span>
+                                        )}
                                     </div>
                                 </TableCell>
                                 <TableCell>
@@ -124,6 +149,13 @@ export function MembersList({ initialMembers, initialInvitations }: MembersListP
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuItem onClick={() => {
+                                                setSelectedUser(member);
+                                                setUpdateExpertiseOpen(true);
+                                            }}>
+                                                <Briefcase className="mr-2 h-4 w-4" />
+                                                Edit Expertise
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem onClick={() => handleRoleChange(member._id, member.role === "admin" ? "member" : "admin")}>
                                                 <UserCog className="mr-2 h-4 w-4" />
                                                 {member.role === "admin" ? "Demote to Member" : "Promote to Admin"}
@@ -142,6 +174,15 @@ export function MembersList({ initialMembers, initialInvitations }: MembersListP
                 </Table>
             </div>
 
+            {selectedUser && (
+                <UpdateExpertiseDialog
+                    userId={selectedUser._id}
+                    currentExpertise={getExpertiseArray(selectedUser.expertise)}
+                    open={updateExpertiseOpen}
+                    onOpenChange={setUpdateExpertiseOpen}
+                />
+            )}
+
             {initialInvitations.length > 0 && (
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold tracking-tight">Pending Invitations</h3>
@@ -151,6 +192,7 @@ export function MembersList({ initialMembers, initialInvitations }: MembersListP
                                 <TableRow>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Role</TableHead>
+                                    <TableHead>Expertise</TableHead>
                                     <TableHead>Sent</TableHead>
                                     <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
@@ -161,6 +203,9 @@ export function MembersList({ initialMembers, initialInvitations }: MembersListP
                                         <TableCell className="font-medium">{invite.email}</TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{invite.role}</Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm text-muted-foreground">{formatExpertise(invite.expertise) || "-"}</span>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-sm">
                                             {format(new Date(invite.createdAt), "MMM d, yyyy")}

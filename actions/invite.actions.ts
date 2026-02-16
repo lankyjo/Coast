@@ -30,13 +30,27 @@ export async function getInvitations() {
 /**
  * Invite a new member
  */
-export async function inviteMember(data: { email: string; role: "admin" | "member" }) {
-    const session = await requireAdmin();
-    await connectDB();
+export async function inviteMember(data: { email: string; role: "admin" | "member"; expertise?: string[] }) {
+    await requireAdmin();
+    await connectDB(); // Ensure DB connection is established
 
-    const { email, role } = data;
+    const session = await auth.api.getSession({
+        headers: await headers(),
+    });
 
-    // Check for existing pending invitation
+    if (!session) {
+        return { error: "Unauthorized" };
+    }
+
+    const { email, role, expertise } = data;
+
+    // Check if user already exists
+    const existingUser = await mongoose.connection.collection("user").findOne({ email });
+    if (existingUser) {
+        return { error: "User already exists" };
+    }
+
+    // Check for pending invite
     const existingInvite = await Invitation.findOne({
         email,
         status: "pending",
@@ -44,11 +58,10 @@ export async function inviteMember(data: { email: string; role: "admin" | "membe
     });
 
     if (existingInvite) {
-        return { error: "An active invitation already exists for this email." };
+        return { error: "Invitation already sent" };
     }
 
-    // Generate token
-    const token = randomBytes(32).toString("hex");
+    const token = crypto.randomUUID();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
 
@@ -56,27 +69,29 @@ export async function inviteMember(data: { email: string; role: "admin" | "membe
         const invitation = await Invitation.create({
             email,
             role,
+            expertise: expertise || [], // Save expertise array
             token,
             invitedBy: session.user.id,
             expiresAt,
         });
 
-        // Send email via Resend
-        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invitation?token=${token}`;
+        // Send email
+        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invite?token=${token}`;
 
-        // Log to console for easy testing in development
-        console.log(`[INVITE URL]: ${inviteUrl}`);
+        // Format expertise for email
+        const expertiseText = expertise && expertise.length > 0 ? ` with expertise in <strong>${expertise.join(", ")}</strong>` : "";
 
         const { error } = await resend.emails.send({
-            from: "The Coast <onboarding@resend.dev>", // Use onboarding@resend.dev if domain is not verified
+            from: "The Coast <noreply@davidcoast.com>",
             to: email,
             subject: "You've been invited to The Coast",
             html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2>You've been invited to join The Coast</h2>
-                    <p>You have been invited to join the team as a <strong>${role}</strong>.</p>
-                    <p>Click the link below to accept your invitation:</p>
-                    <a href="${inviteUrl}" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+                <div style="font-family: 'Inter', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 24px;">
+                    <h2 style="color: #0A0A0A; font-weight: 600; margin-bottom: 8px;">The Coast</h2>
+                    <p style="color: #737373; margin-bottom: 24px;">
+                        You have been invited to join the team as a <strong>${role}</strong>${expertiseText}.
+                    </p>
+                    <a href="${inviteUrl}" style="display: inline-block; background: #0A0A0A; color: #FFFFFF; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">
                         Accept Invitation
                     </a>
                     <p style="margin-top: 24px; color: #666; font-size: 14px;">This link expires in 7 days.</p>
@@ -136,6 +151,7 @@ export async function getInvitationByToken(token: string) {
  */
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import mongoose from "mongoose";
 
 export async function acceptInvitation(token: string, data: { name: string; password: string }) {
     await connectDB();
@@ -157,6 +173,7 @@ export async function acceptInvitation(token: string, data: { name: string; pass
                 password: data.password,
                 name: data.name,
                 role: invitation.role, // Pass the role from invitation
+                expertise: invitation.expertise || [], // Pass expertise array
             },
             headers: await headers(),
         });

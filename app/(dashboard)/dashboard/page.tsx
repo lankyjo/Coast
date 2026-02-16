@@ -23,6 +23,7 @@ import {
     ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import { AIKeyPointsCard } from "@/components/dashboard/AIKeyPointsCard";
 
 export default function DashboardPage() {
     const { user } = useAuthStore();
@@ -108,6 +109,13 @@ export default function DashboardPage() {
                     </Button>
                 )}
             </div>
+
+            {/* AI Insights - Only for Admins */}
+            {isAdmin && (
+                <div className="mb-6">
+                    <AIKeyPointsCard />
+                </div>
+            )}
 
             {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

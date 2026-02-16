@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 import { isAdmin } from "@/actions/auth.actions";
 import { Loader2 } from "lucide-react";
 
+import { AIEODReportGenerator } from "@/components/admin/AIEODReport";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
@@ -41,6 +43,7 @@ export default async function AdminPage() {
             <Tabs defaultValue="team" className="w-full">
                 <TabsList>
                     <TabsTrigger value="team">Team Members</TabsTrigger>
+                    <TabsTrigger value="reports">AI Reports</TabsTrigger>
                     <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
 
@@ -78,6 +81,10 @@ export default async function AdminPage() {
                             {/* Future: Edit workspace name, delete workspace, etc. */}
                         </CardContent>
                     </Card>
+                </TabsContent>
+
+                <TabsContent value="reports" className="mt-6">
+                    <AIEODReportGenerator />
                 </TabsContent>
             </Tabs>
         </div>

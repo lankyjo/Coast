@@ -114,3 +114,32 @@ export async function removeMember(userId: string) {
         }
     }
 }
+
+/**
+ * Update a member's expertise
+ */
+export async function updateMemberExpertise(userId: string, expertise: string[]) {
+    await requireAdmin();
+    await connectDB();
+
+    try {
+        const result = await mongoose.connection.collection("user").updateOne(
+            { _id: new mongoose.Types.ObjectId(userId) },
+            { $set: { expertise } }
+        );
+
+        if (result.matchedCount === 0) {
+            // Try with string ID if ObjectId failed
+            await mongoose.connection.collection("user").updateOne(
+                { _id: userId as any },
+                { $set: { expertise } }
+            );
+        }
+
+        revalidatePath("/admin");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update expertise:", error);
+        return { error: "Failed to update expertise" };
+    }
+}

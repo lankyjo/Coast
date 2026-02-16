@@ -60,6 +60,8 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
+import { suggestAssignee, breakDownTask, suggestDeadline } from "@/actions/ai.actions";
+import { AISuggestion, AITaskBreakdown, AIDeadlineSuggestion } from "@/types/ai.types";
 
 const STATUS_ICONS: Record<string, React.ElementType> = {
     todo: Circle,
@@ -96,6 +98,18 @@ export default function ProjectDetailPage({
     });
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     const [isAIOpen, setIsAIOpen] = useState(false);
+
+    // AI State
+    const [aiLoading, setAiLoading] = useState<"assignee" | "breakdown" | "deadline" | null>(null);
+    const [aiSuggestions, setAiSuggestions] = useState<{
+        assignee: AISuggestion | null;
+        breakdown: AITaskBreakdown | null;
+        deadline: AIDeadlineSuggestion | null;
+    }>({
+        assignee: null,
+        breakdown: null,
+        deadline: null,
+    });
 
     useEffect(() => {
         setMounted(true);
@@ -215,7 +229,7 @@ export default function ProjectDetailPage({
                                             <Plus className="mr-2 h-4 w-4" /> Add Task
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent>
+                                    <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                                         <DialogHeader>
                                             <DialogTitle>Create New Task</DialogTitle>
                                             <DialogDescription>
@@ -223,6 +237,7 @@ export default function ProjectDetailPage({
                                             </DialogDescription>
                                         </DialogHeader>
                                         <div className="grid gap-4 py-4">
+                                            {/* Title */}
                                             <div className="grid gap-2">
                                                 <Label htmlFor="task-title">Title</Label>
                                                 <Input
@@ -232,8 +247,31 @@ export default function ProjectDetailPage({
                                                     onChange={(e) => setNewTask((p) => ({ ...p, title: e.target.value }))}
                                                 />
                                             </div>
+
+                                            {/* Description + AI Buttons */}
                                             <div className="grid gap-2">
-                                                <Label htmlFor="task-desc">Description</Label>
+                                                <div className="flex items-center justify-between">
+                                                    <Label htmlFor="task-desc">Description</Label>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="xs"
+                                                            className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            onClick={async () => {
+                                                                if (!newTask.title) return toast.error("Please enter a title first");
+                                                                setAiLoading("breakdown");
+                                                                const res = await breakDownTask(newTask.title, newTask.description);
+                                                                setAiLoading(null);
+                                                                if (res.success) setAiSuggestions(p => ({ ...p, breakdown: res.data || null }));
+                                                                else toast.error(res.error);
+                                                            }}
+                                                            disabled={!!aiLoading || !newTask.title}
+                                                        >
+                                                            {aiLoading === "breakdown" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
+                                                            Break Down
+                                                        </Button>
+                                                    </div>
+                                                </div>
                                                 <Input
                                                     id="task-desc"
                                                     placeholder="Description..."
@@ -241,8 +279,107 @@ export default function ProjectDetailPage({
                                                     onChange={(e) => setNewTask((p) => ({ ...p, description: e.target.value }))}
                                                 />
                                             </div>
+
+                                            {/* AI Breakdown Suggestion Card */}
+                                            {aiSuggestions.breakdown && (
+                                                <div className="rounded-md border border-blue-200 bg-blue-50/50 p-3 text-sm">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="font-medium text-blue-900 flex items-center gap-2">
+                                                            <Sparkles className="h-4 w-4 text-blue-600" />
+                                                            AI Suggestion: Break Down
+                                                        </span>
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                size="xs"
+                                                                variant="ghost"
+                                                                className="h-6 text-xs"
+                                                                onClick={() => setAiSuggestions(p => ({ ...p, breakdown: null }))}
+                                                            >
+                                                                Dismiss
+                                                            </Button>
+                                                            <Button
+                                                                size="xs"
+                                                                variant="outline"
+                                                                className="h-6 text-xs border-blue-200 bg-white hover:bg-blue-50 text-blue-700"
+                                                                onClick={() => {
+                                                                    const text = aiSuggestions.breakdown?.subtasks
+                                                                        .map((s: any) => `- ${s.title} (${s.estimatedMinutes}m)`).join("\n");
+                                                                    setNewTask(p => ({
+                                                                        ...p,
+                                                                        description: p.description ? `${p.description}\n\nSubtasks:\n${text}` : `Subtasks:\n${text}`
+                                                                    }));
+                                                                    setAiSuggestions(p => ({ ...p, breakdown: null }));
+                                                                }}
+                                                            >
+                                                                Append to Description
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    <ul className="list-disc list-inside space-y-1 text-slate-700">
+                                                        {aiSuggestions.breakdown?.subtasks.map((s: any, i: number) => (
+                                                            <li key={i}>{s.title} <span className="text-slate-500 text-xs">({s.estimatedMinutes}m)</span></li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {/* Assignee + AI Button */}
                                             <div className="grid gap-2">
-                                                <Label>Assign To</Label>
+                                                <div className="flex items-center justify-between">
+                                                    <Label>Assign To</Label>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="xs"
+                                                        className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                                        onClick={async () => {
+                                                            if (!newTask.title) return toast.error("Please enter a title first");
+                                                            setAiLoading("assignee");
+                                                            const res = await suggestAssignee(newTask.title, newTask.description);
+                                                            setAiLoading(null);
+                                                            if (res.success) setAiSuggestions(p => ({ ...p, assignee: res.data || null }));
+                                                            else toast.error(res.error);
+                                                        }}
+                                                        disabled={!!aiLoading || !newTask.title}
+                                                    >
+                                                        {aiLoading === "assignee" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
+                                                        Suggest Assignee
+                                                    </Button>
+                                                </div>
+
+                                                {/* AI Assignee Suggestion Card */}
+                                                {aiSuggestions.assignee && (
+                                                    <div className="rounded-md border border-purple-200 bg-purple-50/50 p-3 text-sm mb-2">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="font-medium text-purple-900 flex items-center gap-2">
+                                                                <Sparkles className="h-4 w-4 text-purple-600" />
+                                                                Suggested: {aiSuggestions.assignee.memberName}
+                                                            </span>
+                                                            <div className="flex gap-2">
+                                                                <Button
+                                                                    size="xs"
+                                                                    variant="ghost"
+                                                                    className="h-6 text-xs"
+                                                                    onClick={() => setAiSuggestions(p => ({ ...p, assignee: null }))}
+                                                                >
+                                                                    Dismiss
+                                                                </Button>
+                                                                <Button
+                                                                    size="xs"
+                                                                    variant="outline"
+                                                                    className="h-6 text-xs border-purple-200 bg-white hover:bg-purple-50 text-purple-700"
+                                                                    onClick={() => {
+                                                                        setNewTask(p => ({ ...p, assigneeIds: [aiSuggestions.assignee?.suggestedMemberId || ""] }));
+                                                                        setAiSuggestions(p => ({ ...p, assignee: null }));
+                                                                    }}
+                                                                >
+                                                                    Apply
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-purple-800 text-xs italic">{aiSuggestions.assignee.reasoning}</p>
+                                                    </div>
+                                                )}
+
                                                 <Popover>
                                                     <PopoverTrigger asChild>
                                                         <Button
@@ -308,7 +445,50 @@ export default function ProjectDetailPage({
                                                     </select>
                                                 </div>
                                                 <div className="grid gap-2">
-                                                    <Label htmlFor="task-deadline">Deadline</Label>
+                                                    <div className="flex items-center justify-between">
+                                                        <Label htmlFor="task-deadline">Deadline</Label>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="xs"
+                                                            className="h-6 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                                            onClick={async () => {
+                                                                if (!newTask.title) return toast.error("Please enter a title first");
+                                                                setAiLoading("deadline");
+                                                                const res = await suggestDeadline(newTask.title, newTask.description, newTask.priority);
+                                                                setAiLoading(null);
+                                                                if (res.success) setAiSuggestions(p => ({ ...p, deadline: res.data || null }));
+                                                                else toast.error(res.error);
+                                                            }}
+                                                            disabled={!!aiLoading || !newTask.title}
+                                                        >
+                                                            {aiLoading === "deadline" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
+                                                            Suggest
+                                                        </Button>
+                                                    </div>
+
+                                                    {/* AI Deadline Suggestion Card */}
+                                                    {aiSuggestions.deadline && (
+                                                        <div className="rounded-md border border-amber-200 bg-amber-50/50 p-2 text-sm mb-1">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="font-medium text-amber-900 flex items-center gap-2 text-xs">
+                                                                    <Sparkles className="h-3 w-3 text-amber-600" />
+                                                                    {new Date(aiSuggestions.deadline.suggestedDeadline).toLocaleDateString()}
+                                                                </span>
+                                                                <Button
+                                                                    size="xs"
+                                                                    variant="outline"
+                                                                    className="h-5 text-[10px] border-amber-200 bg-white hover:bg-amber-50 text-amber-700 px-2"
+                                                                    onClick={() => {
+                                                                        setNewTask(p => ({ ...p, deadline: aiSuggestions.deadline?.suggestedDeadline.split("T")[0] || "" }));
+                                                                        setAiSuggestions(p => ({ ...p, deadline: null }));
+                                                                    }}
+                                                                >
+                                                                    Apply
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <Input
                                                         id="task-deadline"
                                                         type="date"

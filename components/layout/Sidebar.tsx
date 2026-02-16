@@ -148,7 +148,7 @@ export function Sidebar() {
                         className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                     >
                         <UserPlus className="h-4 w-4" />
-                        Admin
+                        Team
                     </Link>
                 )
             )}
