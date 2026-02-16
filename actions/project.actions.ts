@@ -1,12 +1,12 @@
 "use server";
 
 import { createProjectSchema, updateProjectSchema } from "@/utils/validation";
-import { requireAuth } from "./auth.actions";
+import { requireAuth, requireAdmin } from "./auth.actions";
 import * as projectService from "@/services/project.service";
 import { revalidatePath } from "next/cache";
 
 export async function createProject(formData: unknown) {
-    const session = await requireAuth();
+    const session = await requireAdmin();
 
     const result = createProjectSchema.safeParse(formData);
 
@@ -60,7 +60,7 @@ export async function getProjectById(id: string) {
 }
 
 export async function updateProject(id: string, formData: unknown) {
-    await requireAuth();
+    await requireAdmin();
 
     const result = updateProjectSchema.safeParse(formData);
 
@@ -84,7 +84,7 @@ export async function updateProject(id: string, formData: unknown) {
 }
 
 export async function deleteProject(id: string) {
-    await requireAuth();
+    await requireAdmin();
     try {
         const success = await projectService.deleteProject(id);
         if (!success) return { error: "Project not found or could not be deleted" };

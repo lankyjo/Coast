@@ -19,7 +19,7 @@ interface TaskState {
 
     // Actions
     fetchTasks: (filters?: Partial<TaskFilters>) => Promise<void>;
-    createTask: (data: CreateTaskInput) => Promise<ITask | null>;
+    createTask: (data: CreateTaskInput) => Promise<{ success: boolean; error?: string; details?: any; data?: ITask }>;
     updateTask: (id: string, data: UpdateTaskInput) => Promise<void>;
     deleteTask: (id: string) => Promise<boolean>;
     addSubtask: (taskId: string, title: string) => Promise<void>;
@@ -74,14 +74,15 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                 set((state) => ({
                     tasks: [result.data as ITask, ...state.tasks],
                 }));
-                return result.data as ITask;
+                return result;
             } else {
                 set({ error: result.error || "Failed to create task" });
-                return null;
+                return result;
             }
         } catch (error) {
-            set({ error: "An unexpected error occurred" });
-            return null;
+            const errResult = { success: false, error: "An unexpected error occurred" };
+            set({ error: errResult.error });
+            return errResult;
         } finally {
             set({ isLoading: false });
         }

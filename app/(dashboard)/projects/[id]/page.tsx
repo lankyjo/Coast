@@ -3,6 +3,8 @@
 import { useEffect, useState, use } from "react";
 import { useProjectStore } from "@/stores/project.store";
 import { useTaskStore } from "@/stores/task.store";
+import { useAuthStore } from "@/stores/auth.store";
+import { toast } from "sonner";
 import {
     Card,
     CardContent,
@@ -42,6 +44,22 @@ import { ITask } from "@/models/task.model";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
 import { AITaskDialog } from "@/components/tasks/AITaskDialog";
 import { ProjectActions } from "@/components/projects/ProjectActions";
+import { useUserStore } from "@/stores/user.store";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
 
 const STATUS_ICONS: Record<string, React.ElementType> = {
     todo: Circle,
@@ -63,6 +81,8 @@ export default function ProjectDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = use(params);
+    const { user } = useAuthStore();
+    const { users, fetchUsers } = useUserStore();
     const { currentProject, fetchProjectById, isLoading: projectLoading } = useProjectStore();
     const { tasks, fetchTasks, createTask, viewMode, setViewMode, isLoading: tasksLoading } = useTaskStore();
     const [mounted, setMounted] = useState(false);
@@ -72,6 +92,7 @@ export default function ProjectDetailPage({
         description: "",
         priority: "medium" as const,
         deadline: "",
+        assigneeIds: [] as string[],
     });
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     const [isAIOpen, setIsAIOpen] = useState(false);
@@ -80,7 +101,8 @@ export default function ProjectDetailPage({
         setMounted(true);
         fetchProjectById(id);
         fetchTasks({ project: id });
-    }, [id, fetchProjectById, fetchTasks]);
+        fetchUsers();
+    }, [id, fetchProjectById, fetchTasks, fetchUsers]);
 
     if (!mounted) return null;
 
@@ -94,15 +116,27 @@ export default function ProjectDetailPage({
 
     const handleCreateTask = async () => {
         if (!newTask.title) return;
-        await createTask({
-            title: newTask.title,
-            description: newTask.description,
-            projectId: id,
-            priority: newTask.priority,
-            deadline: newTask.deadline || undefined,
-        });
-        setNewTask({ title: "", description: "", priority: "medium", deadline: "" });
-        setIsCreateOpen(false);
+
+        try {
+            const result = await createTask({
+                title: newTask.title,
+                description: newTask.description,
+                projectId: id,
+                priority: newTask.priority,
+                deadline: newTask.deadline || undefined,
+                assigneeIds: newTask.assigneeIds,
+            });
+
+            if (result.success) {
+                toast.success("Task created successfully");
+                setNewTask({ title: "", description: "", priority: "medium", deadline: "", assigneeIds: [] });
+                setIsCreateOpen(false);
+            } else {
+                toast.error(result.error || "Failed to create task");
+            }
+        } catch (err) {
+            toast.error("An error occurred while creating the task");
+        }
     };
 
     const handleOpenDetail = (taskId: string | null) => {
@@ -117,6 +151,7 @@ export default function ProjectDetailPage({
             description: taskData.description,
             priority: taskData.priority,
             deadline: taskData.deadline || "",
+            assigneeIds: [],
         });
         setIsCreateOpen(true);
     };
@@ -149,7 +184,6 @@ export default function ProjectDetailPage({
                         )}
                     </div>
                     <div className="flex items-center gap-2">
-                        {/* View Toggle */}
                         <div className="flex items-center rounded-lg border p-1">
                             <Button
                                 variant={viewMode === "kanban" ? "default" : "ghost"}
@@ -167,77 +201,132 @@ export default function ProjectDetailPage({
                             </Button>
                         </div>
 
-                        <Button variant="outline" onClick={() => setIsAIOpen(true)}>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            AI Draft
-                        </Button>
-
-                        {/* Create Task */}
-                        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                            <DialogTrigger asChild>
-                                <Button>
-                                    <Plus className="mr-2 h-4 w-4" /> Add Task
+                        {user?.role === "admin" && (
+                            <>
+                                <Button variant="outline" onClick={() => setIsAIOpen(true)}>
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    AI Draft
                                 </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Create New Task</DialogTitle>
-                                    <DialogDescription>
-                                        Add a task to {currentProject?.name || "this project"}.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="task-title">Title</Label>
-                                        <Input
-                                            id="task-title"
-                                            placeholder="Task title..."
-                                            value={newTask.title}
-                                            onChange={(e) => setNewTask((p) => ({ ...p, title: e.target.value }))}
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="task-desc">Description</Label>
-                                        <Input
-                                            id="task-desc"
-                                            placeholder="Description..."
-                                            value={newTask.description}
-                                            onChange={(e) => setNewTask((p) => ({ ...p, description: e.target.value }))}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="task-priority">Priority</Label>
-                                            <select
-                                                id="task-priority"
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                                                value={newTask.priority}
-                                                onChange={(e) => setNewTask((p) => ({ ...p, priority: e.target.value as any }))}
-                                            >
-                                                <option value="low">Low</option>
-                                                <option value="medium">Medium</option>
-                                                <option value="high">High</option>
-                                                <option value="urgent">Urgent</option>
-                                            </select>
+
+                                {/* Create Task */}
+                                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button>
+                                            <Plus className="mr-2 h-4 w-4" /> Add Task
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Create New Task</DialogTitle>
+                                            <DialogDescription>
+                                                Add a task to {currentProject?.name || "this project"}.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid gap-4 py-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="task-title">Title</Label>
+                                                <Input
+                                                    id="task-title"
+                                                    placeholder="Task title..."
+                                                    value={newTask.title}
+                                                    onChange={(e) => setNewTask((p) => ({ ...p, title: e.target.value }))}
+                                                />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="task-desc">Description</Label>
+                                                <Input
+                                                    id="task-desc"
+                                                    placeholder="Description..."
+                                                    value={newTask.description}
+                                                    onChange={(e) => setNewTask((p) => ({ ...p, description: e.target.value }))}
+                                                />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label>Assign To</Label>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            className="justify-between"
+                                                        >
+                                                            {newTask.assigneeIds.length > 0
+                                                                ? `${newTask.assigneeIds.length} users selected`
+                                                                : "Select users..."}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-[300px] p-0">
+                                                        <Command>
+                                                            <CommandInput placeholder="Search users..." />
+                                                            <CommandList>
+                                                                <CommandEmpty>No users found.</CommandEmpty>
+                                                                <CommandGroup>
+                                                                    {users.map((u) => (
+                                                                        <CommandItem
+                                                                            key={u.id}
+                                                                            onSelect={() => {
+                                                                                setNewTask(p => ({
+                                                                                    ...p,
+                                                                                    assigneeIds: p.assigneeIds.includes(u.id)
+                                                                                        ? p.assigneeIds.filter(id => id !== u.id)
+                                                                                        : [...p.assigneeIds, u.id]
+                                                                                }));
+                                                                            }}
+                                                                        >
+                                                                            <div className={cn(
+                                                                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                                                                newTask.assigneeIds.includes(u.id)
+                                                                                    ? "bg-primary text-primary-foreground"
+                                                                                    : "opacity-50 [&_svg]:invisible"
+                                                                            )}>
+                                                                                <Check className={cn("h-4 w-4")} />
+                                                                            </div>
+                                                                            <span>{u.name}</span>
+                                                                        </CommandItem>
+                                                                    ))}
+                                                                </CommandGroup>
+                                                            </CommandList>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="task-priority">Priority</Label>
+                                                    <select
+                                                        id="task-priority"
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                                        value={newTask.priority}
+                                                        onChange={(e) => setNewTask((p) => ({ ...p, priority: e.target.value as any }))}
+                                                    >
+                                                        <option value="low">Low</option>
+                                                        <option value="medium">Medium</option>
+                                                        <option value="high">High</option>
+                                                        <option value="urgent">Urgent</option>
+                                                    </select>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="task-deadline">Deadline</Label>
+                                                    <Input
+                                                        id="task-deadline"
+                                                        type="date"
+                                                        value={newTask.deadline}
+                                                        onChange={(e) => setNewTask((p) => ({ ...p, deadline: e.target.value }))}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="task-deadline">Deadline</Label>
-                                            <Input
-                                                id="task-deadline"
-                                                type="date"
-                                                value={newTask.deadline}
-                                                onChange={(e) => setNewTask((p) => ({ ...p, deadline: e.target.value }))}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                                    <Button onClick={handleCreateTask} disabled={!newTask.title}>Create Task</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                        {currentProject && <ProjectActions project={currentProject} />}
+                                        <DialogFooter>
+                                            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                                            <Button onClick={handleCreateTask} disabled={!newTask.title}>Create Task</Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                                {currentProject && <ProjectActions project={currentProject} />}
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -287,12 +376,26 @@ export default function ProjectDetailPage({
                                             >
                                                 <CardContent className="p-3">
                                                     <p className="text-sm font-medium">{task.title}</p>
-                                                    {task.description && (
-                                                        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                                                            {task.description}
-                                                        </p>
-                                                    )}
                                                     <div className="mt-2 flex items-center justify-between">
+                                                        <div className="flex -space-x-2 overflow-hidden">
+                                                            {task.assigneeIds?.slice(0, 3).map((id, i) => {
+                                                                const user = users.find(u => u.id === id.toString());
+                                                                return (
+                                                                    <div
+                                                                        key={id.toString()}
+                                                                        className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-bold"
+                                                                        title={user?.name || "User"}
+                                                                    >
+                                                                        {user?.name?.charAt(0) || "?"}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                            {(task.assigneeIds?.length || 0) > 3 && (
+                                                                <div className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                                                                    +{(task.assigneeIds?.length || 0) - 3}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <Badge
                                                             variant={
                                                                 task.priority === "urgent"
@@ -305,15 +408,6 @@ export default function ProjectDetailPage({
                                                         >
                                                             {task.priority}
                                                         </Badge>
-                                                        {task.deadline && (
-                                                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                                <Calendar className="h-3 w-3" />
-                                                                {new Date(task.deadline).toLocaleDateString("en-US", {
-                                                                    month: "short",
-                                                                    day: "numeric",
-                                                                })}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </CardContent>
                                             </Card>
@@ -355,6 +449,25 @@ export default function ProjectDetailPage({
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
+                                                <div className="flex -space-x-2 overflow-hidden">
+                                                    {task.assigneeIds?.slice(0, 3).map((id, i) => {
+                                                        const user = users.find(u => u.id === id.toString());
+                                                        return (
+                                                            <div
+                                                                key={id.toString()}
+                                                                className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-bold"
+                                                                title={user?.name || "User"}
+                                                            >
+                                                                {user?.name?.charAt(0) || "?"}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {(task.assigneeIds?.length || 0) > 3 && (
+                                                        <div className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                                                            +{(task.assigneeIds?.length || 0) - 3}
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <Badge
                                                     variant={
                                                         task.priority === "urgent"
@@ -383,7 +496,7 @@ export default function ProjectDetailPage({
             )}
 
             <TaskDetailModal
-                key={selectedTask ? `${selectedTask._id}-${selectedTask.updatedAt}` : "task-detail-modal"}
+                key={selectedTask?._id?.toString() || "task-detail-modal"}
                 task={selectedTask}
                 open={!!selectedTaskId}
                 onOpenChange={(open) => !open && handleOpenDetail(null)}

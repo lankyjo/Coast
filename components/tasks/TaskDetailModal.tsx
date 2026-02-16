@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ITask } from "@/models/task.model";
 import { useTaskStore } from "@/stores/task.store";
+import { useAuthStore } from "@/stores/auth.store";
 import {
     Dialog,
     DialogContent,
@@ -35,6 +36,25 @@ import {
 import { TASK_STATUS_LABELS, TASK_STATUS_ORDER, TaskStatus } from "@/constants/task-status";
 import { PRIORITY_LABELS, PRIORITY_ORDER, Priority } from "@/constants/priority";
 
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUserStore } from "@/stores/user.store";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+
 interface TaskDetailModalProps {
     task: ITask | null;
     open: boolean;
@@ -56,6 +76,8 @@ const PRIORITY_BADGE_VARIANT: Record<string, "destructive" | "default" | "second
 };
 
 export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalProps) {
+    const { user } = useAuthStore();
+    const { users } = useUserStore();
     const { updateTask, deleteTask, addSubtask, toggleSubtask } = useTaskStore();
     const [newSubtask, setNewSubtask] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
@@ -63,25 +85,37 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
 
     if (!task) return null;
 
+    const isAdmin = user?.role === "admin";
+    const isAssignee = task.assigneeIds?.some(id => id.toString() === user?.id);
+    const canUpdateStatus = isAdmin || isAssignee;
+    const canManageSubtasks = isAdmin || isAssignee;
+    const canDelete = isAdmin;
+    const canUpdatePriority = isAdmin;
+    const canManageAssignees = isAdmin;
+
     const handleStatusChange = async (status: TaskStatus) => {
+        if (!canUpdateStatus) return;
         await updateTask(task._id.toString(), { status });
     };
 
     const handlePriorityChange = async (priority: Priority) => {
+        if (!canUpdatePriority) return;
         await updateTask(task._id.toString(), { priority });
     };
 
     const handleAddSubtask = async () => {
-        if (!newSubtask.trim()) return;
+        if (!canManageSubtasks || !newSubtask.trim()) return;
         await addSubtask(task._id.toString(), newSubtask.trim());
         setNewSubtask("");
     };
 
     const handleToggleSubtask = async (subtaskId: string, done: boolean) => {
+        if (!canManageSubtasks) return;
         await toggleSubtask(task._id.toString(), subtaskId, done);
     };
 
     const handleDelete = async () => {
+        if (!canDelete) return;
         setIsDeleting(true);
         const success = await deleteTask(task._id.toString());
         if (success) {
@@ -129,6 +163,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                                                 size="sm"
                                                 className="text-xs h-7 px-2"
                                                 onClick={() => handleStatusChange(s)}
+                                                disabled={!canUpdateStatus && !isActive}
                                             >
                                                 <Icon className="mr-1 h-3 w-3" />
                                                 {TASK_STATUS_LABELS[s]}
@@ -153,6 +188,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                                                 size="sm"
                                                 className="text-xs h-7 px-2"
                                                 onClick={() => handlePriorityChange(p)}
+                                                disabled={!canUpdatePriority && !isActive}
                                             >
                                                 {PRIORITY_LABELS[p]}
                                             </Button>
@@ -163,31 +199,101 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                         </div>
 
                         {/* Metadata Row */}
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                            {task.deadline && (
-                                <div className="flex items-center gap-1.5">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    <span>
-                                        Due {new Date(task.deadline).toLocaleDateString("en-US", {
-                                            month: "short",
-                                            day: "numeric",
-                                            year: "numeric",
+                        <div className="flex flex-col gap-4">
+                            {/* Assignees */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    Assignees
+                                </label>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex -space-x-2">
+                                        {(task.assigneeIds || []).map((id) => {
+                                            const u = users.find((u: any) => u.id === id.toString());
+                                            return (
+                                                <Avatar key={id.toString()} className="h-8 w-8 border-2 border-background ring-1 ring-border">
+                                                    <AvatarImage src={u?.image} />
+                                                    <AvatarFallback className="text-[10px] bg-muted font-bold">
+                                                        {u?.name?.charAt(0) || "?"}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            );
                                         })}
-                                    </span>
+                                    </div>
+
+                                    {canManageAssignees && (
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" size="sm" className="h-8 gap-1 rounded-full px-3">
+                                                    <Plus className="h-3.5 w-3.5" />
+                                                    Manage
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[200px] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Search users..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No users found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {users.map((u) => {
+                                                                const isAssigned = (task.assigneeIds || []).some(id => id.toString() === u.id);
+                                                                return (
+                                                                    <CommandItem
+                                                                        key={u.id}
+                                                                        onSelect={async () => {
+                                                                            const currentIds = task.assigneeIds || [];
+                                                                            const newIds = isAssigned
+                                                                                ? currentIds.filter(id => id.toString() !== u.id)
+                                                                                : [...currentIds, u.id];
+                                                                            await updateTask(task._id.toString(), { assigneeIds: newIds as any });
+                                                                        }}
+                                                                    >
+                                                                        <div className={cn(
+                                                                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                                                            isAssigned
+                                                                                ? "bg-primary text-primary-foreground"
+                                                                                : "opacity-50 [&_svg]:invisible"
+                                                                        )}>
+                                                                            <Check className="h-4 w-4" />
+                                                                        </div>
+                                                                        <span className="truncate">{u.name}</span>
+                                                                    </CommandItem>
+                                                                );
+                                                            })}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                    )}
                                 </div>
-                            )}
-                            {task.createdAt && (
-                                <div className="flex items-center gap-1.5">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    <span>
-                                        Created {new Date(task.createdAt).toLocaleDateString("en-US", {
-                                            month: "short",
-                                            day: "numeric",
-                                            year: "numeric",
-                                        })}
-                                    </span>
-                                </div>
-                            )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                                {task.deadline && (
+                                    <div className="flex items-center gap-1.5">
+                                        <Calendar className="h-3.5 w-3.5" />
+                                        <span>
+                                            Due {new Date(task.deadline).toLocaleDateString("en-US", {
+                                                month: "short",
+                                                day: "numeric",
+                                                year: "numeric",
+                                            })}
+                                        </span>
+                                    </div>
+                                )}
+                                {task.createdAt && (
+                                    <div className="flex items-center gap-1.5">
+                                        <Clock className="h-3.5 w-3.5" />
+                                        <span>
+                                            Created {new Date(task.createdAt).toLocaleDateString("en-US", {
+                                                month: "short",
+                                                day: "numeric",
+                                                year: "numeric",
+                                            })}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <Separator />
@@ -224,7 +330,8 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                                     >
                                         <button
                                             onClick={() => handleToggleSubtask(subtask._id.toString(), !subtask.done)}
-                                            className="shrink-0"
+                                            className="shrink-0 disabled:cursor-not-allowed"
+                                            disabled={!canManageSubtasks}
                                         >
                                             {subtask.done ? (
                                                 <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -243,38 +350,44 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                             </div>
 
                             {/* Add Subtask */}
-                            <div className="flex gap-2">
-                                <Input
-                                    placeholder="Add a subtask..."
-                                    value={newSubtask}
-                                    onChange={(e) => setNewSubtask(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
-                                    className="h-8 text-sm"
-                                />
-                                <Button size="sm" variant="outline" className="h-8 shrink-0" onClick={handleAddSubtask} disabled={!newSubtask.trim()}>
-                                    <Plus className="h-3.5 w-3.5" />
-                                </Button>
-                            </div>
+                            {canManageSubtasks && (
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Add a subtask..."
+                                        value={newSubtask}
+                                        onChange={(e) => setNewSubtask(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
+                                        className="h-8 text-sm"
+                                    />
+                                    <Button size="sm" variant="outline" className="h-8 shrink-0" onClick={handleAddSubtask} disabled={!newSubtask.trim()}>
+                                        <Plus className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
+                            )}
                         </div>
 
-                        <Separator />
+                        {canDelete && (
+                            <>
+                                <Separator />
 
-                        {/* Danger Zone */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <AlertTriangle className="h-4 w-4" />
-                                <span>Delete this task permanently</span>
-                            </div>
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => setShowDeleteAlert(true)}
-                                disabled={isDeleting}
-                            >
-                                <Trash2 className="mr-1 h-3.5 w-3.5" />
-                                {isDeleting ? "Deleting..." : "Delete"}
-                            </Button>
-                        </div>
+                                {/* Danger Zone */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <span>Delete this task permanently</span>
+                                    </div>
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => setShowDeleteAlert(true)}
+                                        disabled={isDeleting}
+                                    >
+                                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                                        {isDeleting ? "Deleting..." : "Delete"}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>

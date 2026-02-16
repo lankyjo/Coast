@@ -45,22 +45,22 @@ export const createTaskSchema = z.object({
         .string()
         .min(5, "Description must be at least 5 characters"),
     projectId: z.string().min(1, "Project is required"),
-    assigneeId: z.string().optional(),
+    assigneeIds: z.array(z.string()).optional(),
     priority: z.enum(
         Object.values(PRIORITY) as [string, ...string[]]
     ),
     deadline: z
         .string()
-        .refine((val) => !isNaN(Date.parse(val)), {
+        .optional()
+        .refine((val) => !val || !isNaN(Date.parse(val)), {
             message: "Invalid date format",
-        })
-        .optional(),
+        }),
 });
 
 export const updateTaskSchema = z.object({
     title: z.string().min(2).optional(),
     description: z.string().min(5).optional(),
-    assigneeId: z.string().optional(),
+    assigneeIds: z.array(z.string()).optional(),
     status: z
         .enum(Object.values(TASK_STATUS) as [string, ...string[]])
         .optional(),
@@ -69,10 +69,10 @@ export const updateTaskSchema = z.object({
         .optional(),
     deadline: z
         .string()
-        .refine((val) => !isNaN(Date.parse(val)), {
+        .optional()
+        .refine((val) => !val || !isNaN(Date.parse(val)), {
             message: "Invalid date format",
-        })
-        .optional(),
+        }),
 });
 
 // Type exports

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useTaskStore } from "@/stores/task.store";
 import { useProjectStore } from "@/stores/project.store";
+import { useAuthStore } from "@/stores/auth.store";
+import { useUserStore } from "@/stores/user.store";
 import {
     Card,
     CardContent,
@@ -25,7 +27,14 @@ import {
     LayoutGrid,
     List,
     X,
+    User,
+    Users,
 } from "lucide-react";
+import {
+    Tabs,
+    TabsList,
+    TabsTrigger,
+} from "@/components/ui/tabs";
 import { TASK_STATUS_LABELS, TASK_STATUS_ORDER, TaskStatus } from "@/constants/task-status";
 import { PRIORITY_LABELS, PRIORITY_ORDER, Priority } from "@/constants/priority";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
@@ -56,16 +65,21 @@ export default function TasksPage() {
         setFilters,
     } = useTaskStore();
     const { projects, fetchProjects } = useProjectStore();
+    const { user } = useAuthStore();
+    const { users, fetchUsers } = useUserStore();
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedTask, setSelectedTask] = useState<ITask | null>(null);
-    const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
     useEffect(() => {
         setMounted(true);
-        fetchTasks();
+        // Default to "My Tasks" for members
+        const initialAssignee = user?.role === "member" ? user.id : "all";
+        setFilters({ assignee: initialAssignee });
+        fetchTasks({ assignee: initialAssignee });
         fetchProjects();
-    }, [fetchTasks, fetchProjects]);
+        fetchUsers();
+    }, [fetchTasks, fetchProjects, user, setFilters, fetchUsers]);
 
     if (!mounted) return null;
 
@@ -96,10 +110,16 @@ export default function TasksPage() {
         fetchTasks({ project });
     };
 
-    const handleOpenDetail = (task: ITask) => {
-        setSelectedTask(task);
-        setIsDetailOpen(true);
+    const handleAssigneeFilter = (assignee: string | "all") => {
+        setFilters({ assignee });
+        fetchTasks({ assignee });
     };
+
+    const handleOpenDetail = (taskId: string | null) => {
+        setSelectedTaskId(taskId);
+    };
+
+    const selectedTask = (tasks || []).find(t => t._id.toString() === selectedTaskId) || null;
 
     const activeFilterCount =
         (filters.status !== "all" ? 1 : 0) +
@@ -121,10 +141,32 @@ export default function TasksPage() {
         <div className="space-y-6">
             {/* Page Header */}
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
-                <p className="text-muted-foreground">
-                    View and manage tasks across all projects.
-                </p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
+                        <p className="text-muted-foreground">
+                            View and manage tasks across all projects.
+                        </p>
+                    </div>
+
+                    {/* My Tasks / All Tasks Toggle */}
+                    <Tabs
+                        value={filters.assignee === user?.id ? "mine" : "all"}
+                        onValueChange={(v) => handleAssigneeFilter(v === "mine" ? user?.id || "" : "all")}
+                        className="w-[200px]"
+                    >
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="mine" className="text-xs">
+                                <User className="mr-2 h-3.5 w-3.5" />
+                                My Tasks
+                            </TabsTrigger>
+                            <TabsTrigger value="all" className="text-xs">
+                                <Users className="mr-2 h-3.5 w-3.5" />
+                                All Tasks
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
             </div>
 
             {/* Filter Bar */}
@@ -277,7 +319,7 @@ export default function TasksPage() {
                                             <Card
                                                 key={task._id?.toString()}
                                                 className="cursor-pointer transition-all hover:shadow-sm hover:border-primary/20"
-                                                onClick={() => handleOpenDetail(task)}
+                                                onClick={() => handleOpenDetail(task._id.toString())}
                                             >
                                                 <CardContent className="p-3">
                                                     <p className="text-sm font-medium">{task.title}</p>
@@ -287,21 +329,31 @@ export default function TasksPage() {
                                                         </p>
                                                     )}
                                                     <div className="mt-2 flex items-center justify-between">
+                                                        <div className="flex -space-x-2 overflow-hidden">
+                                                            {task.assigneeIds?.slice(0, 3).map((id, i) => {
+                                                                const user = users.find((u: any) => u.id === id?.toString());
+                                                                return (
+                                                                    <div
+                                                                        key={id?.toString()}
+                                                                        className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-bold"
+                                                                        title={user?.name || "User"}
+                                                                    >
+                                                                        {user?.name?.charAt(0) || "?"}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                            {(task.assigneeIds?.length || 0) > 3 && (
+                                                                <div className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                                                                    +{(task.assigneeIds?.length || 0) - 3}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <Badge
                                                             variant={PRIORITY_BADGE_VARIANT[task.priority] || "outline"}
                                                             className="text-[10px]"
                                                         >
                                                             {task.priority}
                                                         </Badge>
-                                                        {task.deadline && (
-                                                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                                <Calendar className="h-3 w-3" />
-                                                                {new Date(task.deadline).toLocaleDateString("en-US", {
-                                                                    month: "short",
-                                                                    day: "numeric",
-                                                                })}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </CardContent>
                                             </Card>
@@ -323,7 +375,7 @@ export default function TasksPage() {
                                     <div
                                         key={task._id?.toString()}
                                         className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer"
-                                        onClick={() => handleOpenDetail(task)}
+                                        onClick={() => handleOpenDetail(task._id.toString())}
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
                                             <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -340,6 +392,25 @@ export default function TasksPage() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 shrink-0">
+                                            <div className="flex -space-x-2 overflow-hidden mr-2">
+                                                {task.assigneeIds?.slice(0, 3).map((id, i) => {
+                                                    const user = users.find((u: any) => u.id === id?.toString());
+                                                    return (
+                                                        <div
+                                                            key={id?.toString()}
+                                                            className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-bold"
+                                                            title={user?.name || "User"}
+                                                        >
+                                                            {user?.name?.charAt(0) || "?"}
+                                                        </div>
+                                                    );
+                                                })}
+                                                {(task.assigneeIds?.length || 0) > 3 && (
+                                                    <div className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                                                        +{(task.assigneeIds?.length || 0) - 3}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <Badge
                                                 variant={PRIORITY_BADGE_VARIANT[task.priority] || "outline"}
                                                 className="text-xs"
@@ -362,15 +433,10 @@ export default function TasksPage() {
 
             {/* Task Detail Modal */}
             <TaskDetailModal
+                key={selectedTaskId || "task-detail-modal"}
                 task={selectedTask}
-                open={isDetailOpen}
-                onOpenChange={(open) => {
-                    setIsDetailOpen(open);
-                    if (!open) {
-                        // Refresh the selected task from store in case it was updated
-                        setSelectedTask(null);
-                    }
-                }}
+                open={!!selectedTaskId}
+                onOpenChange={(open) => !open && handleOpenDetail(null)}
             />
         </div>
     );

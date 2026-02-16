@@ -27,7 +27,7 @@ export interface ITask extends Document {
     title: string;
     description: string;
     projectId: mongoose.Types.ObjectId;
-    assigneeId: mongoose.Types.ObjectId;
+    assigneeIds: mongoose.Types.ObjectId[];
     assignedBy: mongoose.Types.ObjectId;
     status: "todo" | "in_progress" | "in_review" | "done";
     priority: "low" | "medium" | "high" | "urgent";
@@ -71,10 +71,10 @@ const TaskSchema = new Schema<ITask>(
             ref: "Project",
             required: true,
         },
-        assigneeId: {
+        assigneeIds: [{
             type: Schema.Types.ObjectId,
             ref: "User",
-        },
+        }],
         assignedBy: {
             type: Schema.Types.ObjectId,
             ref: "User",
@@ -115,7 +115,7 @@ const TaskSchema = new Schema<ITask>(
 );
 
 TaskSchema.index({ projectId: 1, status: 1 });
-TaskSchema.index({ assigneeId: 1, status: 1 });
+TaskSchema.index({ assigneeIds: 1, status: 1 });
 TaskSchema.index({ priority: 1 });
 TaskSchema.index({ deadline: 1 });
 

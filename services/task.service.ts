@@ -44,7 +44,7 @@ export async function getTasks(filters: TaskFilters): Promise<ITask[]> {
     }
 
     if (filters.assignee !== "all") {
-        query.assigneeId = filters.assignee;
+        query.assigneeIds = { $in: [filters.assignee] };
     }
 
     if (filters.project !== "all") {

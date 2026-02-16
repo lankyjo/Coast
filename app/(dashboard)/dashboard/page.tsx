@@ -40,31 +40,39 @@ export default function DashboardPage() {
 
     const isLoading = projectsLoading || tasksLoading;
 
+    // Filter tasks assigned to current user
+    const myTasks = tasks.filter((t: any) =>
+        t.assigneeIds?.some((id: any) => id.toString() === user?.id)
+    );
+
     // Derived stats
-    const activeProjects = projects.filter((p) => p.status === "active").length;
-    const totalTasks = tasks.length;
-    const completedTasks = tasks.filter((t) => t.status === "done").length;
-    const inProgressTasks = tasks.filter((t) => t.status === "in_progress").length;
-    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    const isAdmin = user?.role === "admin";
+    const displayTasks = isAdmin ? tasks : myTasks;
+
+    const activeProjectsCount = projects.filter((p) => p.status === "active").length;
+    const totalTasksCount = displayTasks.length;
+    const completedTasksCount = displayTasks.filter((t) => t.status === "done").length;
+    const inProgressTasksCount = displayTasks.filter((t) => t.status === "in_progress").length;
+    const completionRate = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
     const stats = [
         {
-            title: "Active Projects",
-            value: activeProjects,
+            title: isAdmin ? "Active Projects" : "My Projects",
+            value: activeProjectsCount,
             icon: FolderKanban,
             description: `${projects.length} total`,
             color: "text-blue-500",
         },
         {
-            title: "Total Tasks",
-            value: totalTasks,
+            title: isAdmin ? "Total Tasks" : "My Tasks",
+            value: totalTasksCount,
             icon: CheckSquare,
-            description: `${completedTasks} completed`,
+            description: `${completedTasksCount} completed`,
             color: "text-green-500",
         },
         {
             title: "In Progress",
-            value: inProgressTasks,
+            value: inProgressTasksCount,
             icon: Clock,
             description: "tasks underway",
             color: "text-amber-500",
@@ -87,14 +95,18 @@ export default function DashboardPage() {
                         Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
                     </h1>
                     <p className="text-muted-foreground">
-                        Here&apos;s an overview of your workspace.
+                        {isAdmin
+                            ? "Here's an overview of the workspace."
+                            : "Here are your tasks and project updates."}
                     </p>
                 </div>
-                <Button asChild>
-                    <Link href="/projects?new=true">
-                        <Plus className="mr-2 h-4 w-4" /> New Project
-                    </Link>
-                </Button>
+                {isAdmin && (
+                    <Button asChild>
+                        <Link href="/projects?new=true">
+                            <Plus className="mr-2 h-4 w-4" /> New Project
+                        </Link>
+                    </Button>
+                )}
             </div>
 
             {/* Stats Grid */}
@@ -121,71 +133,22 @@ export default function DashboardPage() {
                 ))}
             </div>
 
-            {/* Content Grid: Recent Projects & Recent Tasks */}
+            {/* Content Grid: Recent Projects & Tasks */}
             <div className="grid gap-4 md:grid-cols-2">
-                {/* Recent Projects */}
-                <Card>
+                {/* My/Recent Tasks - Primary for Members */}
+                <Card className={!isAdmin ? "md:order-1" : ""}>
                     <CardHeader>
                         <div className="flex items-center justify-between">
-                            <CardTitle>Recent Projects</CardTitle>
-                            <Button variant="ghost" size="sm" asChild>
-                                <Link href="/projects">
-                                    View all <ArrowRight className="ml-1 h-4 w-4" />
-                                </Link>
-                            </Button>
-                        </div>
-                        <CardDescription>Your most recent project activity</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? (
-                            <div className="space-y-3">
-                                {[1, 2, 3].map((i) => (
-                                    <Skeleton key={i} className="h-12 w-full" />
-                                ))}
-                            </div>
-                        ) : projects.length === 0 ? (
-                            <p className="py-4 text-center text-sm text-muted-foreground">
-                                No projects yet. Create your first project!
-                            </p>
-                        ) : (
-                            <div className="space-y-3">
-                                {projects.slice(0, 5).map((project) => (
-                                    <Link
-                                        key={project._id?.toString()}
-                                        href={`/projects/${project._id}`}
-                                        className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                                    >
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-medium leading-none">{project.name}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {project.description?.slice(0, 60)}
-                                                {(project.description?.length || 0) > 60 ? "..." : ""}
-                                            </p>
-                                        </div>
-                                        <Badge
-                                            variant={project.status === "active" ? "default" : "secondary"}
-                                        >
-                                            {project.status}
-                                        </Badge>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* Recent Tasks */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle>Recent Tasks</CardTitle>
+                            <CardTitle>{isAdmin ? "Recent Tasks" : "My Tasks"}</CardTitle>
                             <Button variant="ghost" size="sm" asChild>
                                 <Link href="/tasks">
                                     View all <ArrowRight className="ml-1 h-4 w-4" />
                                 </Link>
                             </Button>
                         </div>
-                        <CardDescription>Tasks across all projects</CardDescription>
+                        <CardDescription>
+                            {isAdmin ? "Latest tasks across all projects" : "Tasks currently assigned to you"}
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
@@ -194,13 +157,13 @@ export default function DashboardPage() {
                                     <Skeleton key={i} className="h-12 w-full" />
                                 ))}
                             </div>
-                        ) : tasks.length === 0 ? (
+                        ) : displayTasks.length === 0 ? (
                             <p className="py-4 text-center text-sm text-muted-foreground">
-                                No tasks yet. Start by creating a project.
+                                {isAdmin ? "No tasks yet." : "You have no tasks assigned to you right now."}
                             </p>
                         ) : (
                             <div className="space-y-3">
-                                {tasks.slice(0, 5).map((task) => (
+                                {displayTasks.slice(0, 5).map((task) => (
                                     <div
                                         key={task._id?.toString()}
                                         className="flex items-center justify-between rounded-lg border p-3"
@@ -223,6 +186,57 @@ export default function DashboardPage() {
                                             {task.status?.replace("_", " ")}
                                         </Badge>
                                     </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Recent Projects */}
+                <Card className={!isAdmin ? "md:order-2" : ""}>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle>Recent Projects</CardTitle>
+                            <Button variant="ghost" size="sm" asChild>
+                                <Link href="/projects">
+                                    View all <ArrowRight className="ml-1 h-4 w-4" />
+                                </Link>
+                            </Button>
+                        </div>
+                        <CardDescription>Latest project activity</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? (
+                            <div className="space-y-3">
+                                {[1, 2, 3].map((i) => (
+                                    <Skeleton key={i} className="h-12 w-full" />
+                                ))}
+                            </div>
+                        ) : projects.length === 0 ? (
+                            <p className="py-4 text-center text-sm text-muted-foreground">
+                                No projects yet.
+                            </p>
+                        ) : (
+                            <div className="space-y-3">
+                                {projects.slice(0, 5).map((project) => (
+                                    <Link
+                                        key={project._id?.toString()}
+                                        href={`/projects/${project._id}`}
+                                        className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                                    >
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium leading-none">{project.name}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {project.description?.slice(0, 60)}
+                                                {(project.description?.length || 0) > 60 ? "..." : ""}
+                                            </p>
+                                        </div>
+                                        <Badge
+                                            variant={project.status === "active" ? "default" : "secondary"}
+                                        >
+                                            {project.status}
+                                        </Badge>
+                                    </Link>
                                 ))}
                             </div>
                         )}

@@ -30,7 +30,7 @@ export interface Task {
     title: string;
     description: string;
     projectId: string;
-    assigneeId: string;
+    assigneeIds: string[];
     assignedBy: string;
     status: TaskStatus;
     priority: Priority;
@@ -49,7 +49,7 @@ export interface CreateTaskInput {
     title: string;
     description: string;
     projectId: string;
-    assigneeId?: string;
+    assigneeIds?: string[];
     priority: Priority;
     deadline?: string;
 }
@@ -57,7 +57,7 @@ export interface CreateTaskInput {
 export interface UpdateTaskInput {
     title?: string;
     description?: string;
-    assigneeId?: string;
+    assigneeIds?: string[];
     status?: TaskStatus;
     priority?: Priority;
     deadline?: string;

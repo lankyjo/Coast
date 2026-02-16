@@ -1,102 +1,142 @@
 "use server";
 
 import { createTaskSchema, updateTaskSchema } from "@/utils/validation";
-import { requireAuth } from "./auth.actions";
+import { requireAuth, requireAdmin } from "./auth.actions";
 import * as taskService from "@/services/task.service";
 import { revalidatePath } from "next/cache";
 
 export async function createTask(formData: unknown) {
-    const session = await requireAuth();
-
-    const result = createTaskSchema.safeParse(formData);
-
-    if (!result.success) {
-        return {
-            error: "Validation failed",
-            details: result.error.flatten().fieldErrors,
-        };
-    }
-
     try {
+        const session = await requireAdmin(); // Only admins can create tasks
+        const result = createTaskSchema.safeParse(formData);
+
+        if (!result.success) {
+            return {
+                success: false,
+                error: "Validation failed: " + Object.entries(result.error.flatten().fieldErrors)
+                    .map(([field, errors]) => `${field}: ${errors?.join(", ")}`)
+                    .join("; "),
+                details: result.error.flatten().fieldErrors,
+            };
+        }
+
         const task = await taskService.createTask(result.data as any, session.user.id);
         revalidatePath("/dashboard");
         revalidatePath(`/projects/${result.data.projectId}`);
         return { success: true, data: task };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to create task:", error);
-        return { error: "Failed to create task" };
+        return { success: false, error: error.message || "Failed to create task" };
     }
 }
 
 export async function getTasks(filters: any) {
-    await requireAuth();
     try {
+        await requireAuth();
         const tasks = await taskService.getTasks(filters);
         return { success: true, data: tasks };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to fetch tasks:", error);
-        return { error: "Failed to fetch tasks" };
+        return { success: false, error: error.message || "Failed to fetch tasks" };
     }
 }
 
 export async function updateTask(id: string, formData: unknown) {
-    await requireAuth();
-
-    const result = updateTaskSchema.safeParse(formData);
-
-    if (!result.success) {
-        return {
-            error: "Validation failed",
-            details: result.error.flatten().fieldErrors,
-        };
-    }
-
     try {
+        const session = await requireAuth();
+        const result = updateTaskSchema.safeParse(formData);
+
+        if (!result.success) {
+            return {
+                success: false,
+                error: "Validation failed: " + Object.entries(result.error.flatten().fieldErrors)
+                    .map(([field, errors]) => `${field}: ${errors?.join(", ")}`)
+                    .join("; "),
+                details: result.error.flatten().fieldErrors,
+            };
+        }
+
+        // Fetch existing task for permission check
+        const existingTask = await taskService.getTaskById(id);
+        if (!existingTask) return { success: false, error: "Task not found" };
+
+        // Permission Check
+        if (session.user.role !== "admin") {
+            const isAssignee = existingTask.assigneeIds?.some(id => id.toString() === session.user.id);
+            if (!isAssignee) {
+                return { success: false, error: "You can only update tasks assigned to you." };
+            }
+
+            const updates = result.data as any;
+            const allowedFields = ["status"];
+            const requestedFields = Object.keys(updates);
+            const isOnlyStatus = requestedFields.every(field => allowedFields.includes(field));
+
+            if (!isOnlyStatus) {
+                return { success: false, error: "Members can only update task status." };
+            }
+        }
+
         const task = await taskService.updateTask(id, result.data as any);
-        if (!task) return { error: "Task not found" };
+        if (!task) return { success: false, error: "Task not found" };
 
         revalidatePath(`/projects/${task.projectId}`);
+        revalidatePath("/dashboard");
         return { success: true, data: task };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to update task:", error);
-        return { error: "Failed to update task" };
+        return { success: false, error: error.message || "Failed to update task" };
     }
 }
 
 export async function addSubtask(taskId: string, title: string) {
-    await requireAuth();
     try {
+        const session = await requireAuth();
+        const existingTask = await taskService.getTaskById(taskId);
+        if (!existingTask) return { success: false, error: "Task not found" };
+
+        if (session.user.role !== "admin") {
+            const isAssignee = existingTask.assigneeIds?.some((id: any) => id.toString() === session.user.id);
+            if (!isAssignee) return { success: false, error: "Unauthorized" };
+        }
+
         const task = await taskService.addSubtask(taskId, title);
-        if (!task) return { error: "Task not found" };
         revalidatePath(`/projects/${task.projectId}`);
         return { success: true, data: task };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to add subtask:", error);
-        return { error: "Failed to add subtask" };
+        return { success: false, error: error.message || "Failed to add subtask" };
     }
 }
 
 export async function toggleSubtask(taskId: string, subtaskId: string, done: boolean) {
-    await requireAuth();
     try {
+        const session = await requireAuth();
+        const existingTask = await taskService.getTaskById(taskId);
+        if (!existingTask) return { success: false, error: "Task not found" };
+
+        if (session.user.role !== "admin") {
+            const isAssignee = existingTask.assigneeIds?.some((id: any) => id.toString() === session.user.id);
+            if (!isAssignee) return { success: false, error: "Unauthorized" };
+        }
+
         const task = await taskService.toggleSubtask(taskId, subtaskId, done);
-        if (!task) return { error: "Task not found" };
         revalidatePath(`/projects/${task.projectId}`);
         return { success: true, data: task };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to toggle subtask:", error);
-        return { error: "Failed to toggle subtask" };
+        return { success: false, error: error.message || "Failed to toggle subtask" };
     }
 }
 
 export async function deleteTask(id: string) {
-    await requireAuth();
     try {
+        await requireAdmin();
         const success = await taskService.deleteTask(id);
-        if (!success) return { error: "Task not found" };
+        if (!success) return { success: false, error: "Task not found" };
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to delete task:", error);
-        return { error: "Failed to delete task" };
+        return { success: false, error: error.message || "Failed to delete task" };
     }
 }
