@@ -26,6 +26,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Plus, Search, FolderKanban } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { IProject } from "@/models/project.model";
 
 export default function ProjectsPage() {
@@ -33,6 +34,15 @@ export default function ProjectsPage() {
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (searchParams.get("new") === "true") {
+            setIsCreateOpen(true);
+            router.replace("/projects"); // Clear the param
+        }
+    }, [searchParams, router]);
 
     // Create form state
     const [newProject, setNewProject] = useState({

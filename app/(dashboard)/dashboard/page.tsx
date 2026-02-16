@@ -91,7 +91,7 @@ export default function DashboardPage() {
                     </p>
                 </div>
                 <Button asChild>
-                    <Link href="/projects">
+                    <Link href="/projects?new=true">
                         <Plus className="mr-2 h-4 w-4" /> New Project
                     </Link>
                 </Button>

@@ -33,10 +33,15 @@ import {
     Circle,
     Clock,
     Eye,
+    Sparkles,
+    Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { TASK_STATUS_LABELS, TASK_STATUS_ORDER, TaskStatus } from "@/constants/task-status";
 import { ITask } from "@/models/task.model";
+import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
+import { AITaskDialog } from "@/components/tasks/AITaskDialog";
+import { ProjectActions } from "@/components/projects/ProjectActions";
 
 const STATUS_ICONS: Record<string, React.ElementType> = {
     todo: Circle,
@@ -68,6 +73,8 @@ export default function ProjectDetailPage({
         priority: "medium" as const,
         deadline: "",
     });
+    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+    const [isAIOpen, setIsAIOpen] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -96,6 +103,22 @@ export default function ProjectDetailPage({
         });
         setNewTask({ title: "", description: "", priority: "medium", deadline: "" });
         setIsCreateOpen(false);
+    };
+
+    const handleOpenDetail = (taskId: string | null) => {
+        setSelectedTaskId(taskId);
+    };
+
+    const selectedTask = tasks.find(t => t._id.toString() === selectedTaskId) || null;
+
+    const handleTaskGenerated = (taskData: any) => {
+        setNewTask({
+            title: taskData.title,
+            description: taskData.description,
+            priority: taskData.priority,
+            deadline: taskData.deadline || "",
+        });
+        setIsCreateOpen(true);
     };
 
     return (
@@ -143,6 +166,11 @@ export default function ProjectDetailPage({
                                 <List className="mr-1 h-4 w-4" /> List
                             </Button>
                         </div>
+
+                        <Button variant="outline" onClick={() => setIsAIOpen(true)}>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            AI Draft
+                        </Button>
 
                         {/* Create Task */}
                         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -209,6 +237,7 @@ export default function ProjectDetailPage({
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
+                        {currentProject && <ProjectActions project={currentProject} />}
                     </div>
                 </div>
             </div>
@@ -254,6 +283,7 @@ export default function ProjectDetailPage({
                                             <Card
                                                 key={task._id?.toString()}
                                                 className={`border-t-2 ${STATUS_COLORS[status]} cursor-pointer transition-all hover:shadow-sm`}
+                                                onClick={() => handleOpenDetail(task._id.toString())}
                                             >
                                                 <CardContent className="p-3">
                                                     <p className="text-sm font-medium">{task.title}</p>
@@ -312,7 +342,8 @@ export default function ProjectDetailPage({
                                     return (
                                         <div
                                             key={task._id?.toString()}
-                                            className="flex items-center justify-between rounded-md px-3 py-2.5 transition-colors hover:bg-muted/50"
+                                            className="flex items-center justify-between rounded-md px-3 py-2.5 transition-colors hover:bg-muted/50 cursor-pointer"
+                                            onClick={() => handleOpenDetail(task._id.toString())}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <StatusIcon className="h-4 w-4 text-muted-foreground" />
@@ -350,6 +381,19 @@ export default function ProjectDetailPage({
                     </CardContent>
                 </Card>
             )}
+
+            <TaskDetailModal
+                key={selectedTask ? `${selectedTask._id}-${selectedTask.updatedAt}` : "task-detail-modal"}
+                task={selectedTask}
+                open={!!selectedTaskId}
+                onOpenChange={(open) => !open && handleOpenDetail(null)}
+            />
+
+            <AITaskDialog
+                open={isAIOpen}
+                onOpenChange={setIsAIOpen}
+                onTaskGenerated={handleTaskGenerated}
+            />
         </div>
     );
 }

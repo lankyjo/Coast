@@ -134,21 +134,21 @@ export function Sidebar() {
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Link
-                                href="/admin/invite"
+                                href="/admin"
                                 className="flex items-center justify-center rounded-lg px-2 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                             >
                                 <UserPlus className="h-4 w-4" />
                             </Link>
                         </TooltipTrigger>
-                        <TooltipContent side="right">Invite Member</TooltipContent>
+                        <TooltipContent side="right">Admin</TooltipContent>
                     </Tooltip>
                 ) : (
                     <Link
-                        href="/admin/invite"
+                        href="/admin"
                         className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-muted"
                     >
                         <UserPlus className="h-4 w-4" />
-                        Invite Member
+                        Admin
                     </Link>
                 )
             )}
