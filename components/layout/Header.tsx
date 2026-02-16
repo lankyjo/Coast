@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/stores/ui.store";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -69,7 +70,7 @@ export function Header() {
             </div>
 
             <div className="flex items-center gap-2">
-                {/* Header actions slot */}
+                <NotificationBell />
             </div>
         </header>
     );

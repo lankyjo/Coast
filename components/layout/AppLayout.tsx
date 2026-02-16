@@ -4,13 +4,15 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth.store";
-import { useNotificationStore } from "@/stores/notification.store";
 import { authClient } from "@/lib/auth-client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { user, isLoading, setUser, setLoading } = useAuthStore();
-    const { fetchNotifications } = useNotificationStore();
+
+    // Start SSE connection and initial notification fetch
+    useNotifications();
 
     // Hydrate auth/user on mount
     useEffect(() => {
@@ -25,14 +27,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         image: data.user.image || undefined,
                         role: (data.user as any).role,
                     });
-                    fetchNotifications();
                 } else {
                     setLoading(false);
                 }
             }
         };
         init();
-    }, [user, setUser, setLoading, fetchNotifications]);
+    }, [user, setUser, setLoading]);
 
     if (isLoading) {
         return (

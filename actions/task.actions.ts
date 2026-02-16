@@ -3,6 +3,7 @@
 import { createTaskSchema, updateTaskSchema } from "@/utils/validation";
 import { requireAuth, requireAdmin } from "./auth.actions";
 import * as taskService from "@/services/task.service";
+import * as notificationService from "@/services/notification.service";
 import { revalidatePath } from "next/cache";
 
 export async function createTask(formData: unknown) {
@@ -23,6 +24,29 @@ export async function createTask(formData: unknown) {
         const task = await taskService.createTask(result.data as any, session.user.id);
         revalidatePath("/dashboard");
         revalidatePath(`/projects/${result.data.projectId}`);
+
+        // Send notifications to all assignees
+        const assigneeIds = result.data.assigneeIds || [];
+        for (const assigneeId of assigneeIds) {
+            if (assigneeId !== session.user.id) {
+                try {
+                    await notificationService.createNotification({
+                        userId: assigneeId,
+                        type: "task_assigned",
+                        title: "New task assigned to you",
+                        message: `You've been assigned: "${task.title}"`,
+                        metadata: {
+                            taskId: task._id?.toString(),
+                            projectId: result.data.projectId,
+                            triggeredBy: session.user.id,
+                        },
+                    });
+                } catch (e) {
+                    console.error("Failed to send task_assigned notification:", e);
+                }
+            }
+        }
+
         return { success: true, data: task };
     } catch (error: any) {
         console.error("Failed to create task:", error);
@@ -79,6 +103,57 @@ export async function updateTask(id: string, formData: unknown) {
 
         const task = await taskService.updateTask(id, result.data as any);
         if (!task) return { success: false, error: "Task not found" };
+
+        // Send task_completed notification when status changes to done
+        const updates = result.data as any;
+        if (updates.status === "done" && existingTask.status !== "done") {
+            // Notify the admin who assigned the task
+            if (existingTask.assignedBy && existingTask.assignedBy.toString() !== session.user.id) {
+                try {
+                    await notificationService.createNotification({
+                        userId: existingTask.assignedBy.toString(),
+                        type: "task_completed",
+                        title: "Task completed",
+                        message: `"${task.title}" has been completed by ${session.user.name || "a team member"}`,
+                        metadata: {
+                            taskId: id,
+                            projectId: task.projectId?.toString(),
+                            triggeredBy: session.user.id,
+                        },
+                    });
+                } catch (e) {
+                    console.error("Failed to send task_completed notification:", e);
+                }
+            }
+        }
+
+        // Send task_assigned notification when new assignees are added
+        if (updates.assigneeIds && Array.isArray(updates.assigneeIds)) {
+            const oldAssigneeIds = (existingTask.assigneeIds || []).map((a: any) => a.toString());
+            const newlyAdded = updates.assigneeIds.filter(
+                (assigneeId: string) => !oldAssigneeIds.includes(assigneeId)
+            );
+
+            for (const assigneeId of newlyAdded) {
+                if (assigneeId !== session.user.id) {
+                    try {
+                        await notificationService.createNotification({
+                            userId: assigneeId,
+                            type: "task_assigned",
+                            title: "New task assigned to you",
+                            message: `You've been assigned: "${task.title}"`,
+                            metadata: {
+                                taskId: id,
+                                projectId: task.projectId?.toString(),
+                                triggeredBy: session.user.id,
+                            },
+                        });
+                    } catch (e) {
+                        console.error("Failed to send task_assigned notification:", e);
+                    }
+                }
+            }
+        }
 
         revalidatePath(`/projects/${task.projectId}`);
         revalidatePath("/dashboard");
