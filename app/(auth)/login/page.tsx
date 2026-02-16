@@ -4,6 +4,11 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoveLeft, Loader2 } from "lucide-react";
 
 function LoginForm() {
     const router = useRouter();
@@ -41,114 +46,76 @@ function LoginForm() {
 
     return (
         <div className="w-full max-w-[400px]">
-            <div className="mb-8 text-center">
-                <Link
-                    href="/"
-                    className="inline-block text-sm text-muted transition-colors hover:text-foreground"
-                >
-                    ← Back
-                </Link>
-                <h1 className="mt-4 text-2xl font-semibold text-foreground">
-                    Welcome back
-                </h1>
-                <p className="mt-1 text-sm text-muted">
-                    Sign in to your Coast account
-                </p>
+            <div className="mb-4">
+                <Button variant="ghost" size="sm" asChild className="-ml-3 mb-4 text-muted-foreground">
+                    <Link href="/">
+                        <MoveLeft className="mr-2 h-4 w-4" /> Back to Home
+                    </Link>
+                </Button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                    <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-                        {error}
-                    </div>
-                )}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Welcome back</CardTitle>
+                    <CardDescription>Sign in to your Coast account</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {error && (
+                            <div className="rounded-md bg-destructive/15 px-4 py-3 text-sm text-destructive">
+                                {error}
+                            </div>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="you@davidcoast.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
 
-                <div className="space-y-1.5">
-                    <label
-                        htmlFor="email"
-                        className="block text-sm font-medium text-foreground"
-                    >
-                        Email
-                    </label>
-                    <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="you@davidcoast.com"
-                        required
-                        className="w-full rounded-xl border border-card-border bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
-                    />
-                </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                placeholder="Enter your password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
 
-                <div className="space-y-1.5">
-                    <label
-                        htmlFor="password"
-                        className="block text-sm font-medium text-foreground"
-                    >
-                        Password
-                    </label>
-                    <input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter your password"
-                        required
-                        className="w-full rounded-xl border border-card-border bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/10"
-                    />
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    {isLoading ? (
-                        <span className="flex items-center justify-center gap-2">
-                            <svg
-                                className="h-4 w-4 animate-spin"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                            >
-                                <circle
-                                    className="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeWidth="4"
-                                />
-                                <path
-                                    className="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                                />
-                            </svg>
-                            Signing in...
-                        </span>
-                    ) : (
-                        "Sign In"
-                    )}
-                </button>
-            </form>
-
-            <p className="mt-6 text-center text-xs text-muted-foreground">
-                Only authorized team members can access this platform.
-            </p>
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Signing in...
+                                </>
+                            ) : (
+                                "Sign In"
+                            )}
+                        </Button>
+                    </form>
+                </CardContent>
+                <CardFooter className="flex justify-center">
+                    <p className="text-xs text-muted-foreground">
+                        Only authorized team members can access this platform.
+                    </p>
+                </CardFooter>
+            </Card>
         </div>
     );
 }
 
 export default function LoginPage() {
     return (
-        <main className="flex min-h-screen items-center justify-center bg-background px-4">
-            <Suspense
-                fallback={
-                    <div className="flex items-center gap-2 text-muted">Loading...</div>
-                }
-            >
+        <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
+            <Suspense fallback={<div className="flex h-[400px] w-full items-center justify-center text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
                 <LoginForm />
             </Suspense>
         </main>

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 
 export default function GatewayPage() {
   return (
@@ -43,27 +45,11 @@ export default function GatewayPage() {
         </div>
 
         {/* CTA */}
-        <Link
-          href="/login"
-          className="group relative inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-sm font-semibold text-[#0A0A0A] transition-all duration-300 hover:bg-white/90 hover:shadow-[0_0_40px_rgba(255,255,255,0.1)]"
-        >
-          Team Login
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="transition-transform duration-300 group-hover:translate-x-0.5"
-          >
-            <path d="M5 12h14" />
-            <path d="m12 5 7 7-7 7" />
-          </svg>
-        </Link>
+        <Button asChild size="lg" className="h-12 rounded-xl bg-white text-black hover:bg-white/90">
+          <Link href="/login">
+            Team Login <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
 
         {/* Footer */}
         <p className="mt-8 text-xs text-white/20">

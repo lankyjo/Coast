@@ -3,6 +3,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 function AcceptInvitationContent() {
     const router = useRouter();
@@ -45,61 +48,39 @@ function AcceptInvitationContent() {
     }, [invitationId, router]);
 
     return (
-        <div className="w-full max-w-[400px] text-center">
-            {status === "loading" && (
-                <div className="flex flex-col items-center gap-4">
-                    <svg
-                        className="h-8 w-8 animate-spin text-accent"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                    >
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    <h1 className="text-xl font-semibold text-foreground">
-                        Accepting invitation...
-                    </h1>
-                    <p className="text-sm text-muted">Setting up your account</p>
-                </div>
-            )}
+        <Card className="w-full max-w-[400px] text-center">
+            <CardHeader>
+                <CardTitle>
+                    {status === "loading" && "Accepting Invitation"}
+                    {status === "success" && "Welcome to The Coast"}
+                    {status === "error" && "Invitation Error"}
+                </CardTitle>
+                <CardDescription>
+                    {status === "loading" && "Setting up your account..."}
+                    {status === "success" && "Redirecting you to the dashboard..."}
+                    {status === "error" && "There was a problem accepting your invitation."}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+                {status === "loading" && (
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                )}
 
-            {status === "success" && (
-                <div className="flex flex-col items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                            <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                    </div>
-                    <h1 className="text-xl font-semibold text-foreground">
-                        Welcome to The Coast!
-                    </h1>
-                    <p className="text-sm text-muted">Redirecting you to the dashboard...</p>
-                </div>
-            )}
+                {status === "success" && (
+                    <CheckCircle2 className="h-12 w-12 text-green-500" />
+                )}
 
-            {status === "error" && (
-                <div className="flex flex-col items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="15" x2="9" y1="9" y2="15" />
-                            <line x1="9" x2="15" y1="9" y2="15" />
-                        </svg>
+                {status === "error" && (
+                    <div className="flex flex-col items-center gap-4">
+                        <XCircle className="h-12 w-12 text-destructive" />
+                        <p className="text-sm text-destructive">{errorMessage}</p>
+                        <Button onClick={() => router.push("/login")} variant="default">
+                            Go to Login
+                        </Button>
                     </div>
-                    <h1 className="text-xl font-semibold text-foreground">
-                        Invitation Error
-                    </h1>
-                    <p className="text-sm text-red-600">{errorMessage}</p>
-                    <button
-                        onClick={() => router.push("/login")}
-                        className="mt-2 rounded-xl bg-foreground px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-foreground/90"
-                    >
-                        Go to Login
-                    </button>
-                </div>
-            )}
-        </div>
+                )}
+            </CardContent>
+        </Card>
     );
 }
 
@@ -108,7 +89,7 @@ export default function AcceptInvitationPage() {
         <main className="flex min-h-screen items-center justify-center bg-background px-4">
             <Suspense
                 fallback={
-                    <div className="flex items-center gap-2 text-muted">Loading...</div>
+                    <div className="flex h-[400px] w-full items-center justify-center text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>
                 }
             >
                 <AcceptInvitationContent />
