@@ -16,7 +16,7 @@ import React from "react";
 
 export function Header() {
     const pathname = usePathname();
-    const { setSidebarOpen } = useUIStore();
+    const { setMobileSheetOpen } = useUIStore();
 
     const segments = pathname.split("/").filter((segment) => segment !== "");
 
@@ -30,7 +30,7 @@ export function Header() {
                 variant="outline"
                 size="icon"
                 className="shrink-0 md:hidden"
-                onClick={() => setSidebarOpen(true)}
+                onClick={() => setMobileSheetOpen(true)}
             >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
@@ -69,7 +69,7 @@ export function Header() {
             </div>
 
             <div className="flex items-center gap-2">
-                {/* Header actions slot (search, quick add, etc.) */}
+                {/* Header actions slot */}
             </div>
         </header>
     );
