@@ -18,6 +18,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { getInitials } from "@/lib/user-utils";
 
 interface BoardTaskCardProps {
     task: ITask;
@@ -120,31 +121,57 @@ export function BoardTaskCard({ task, boardId, onClick }: BoardTaskCardProps) {
 
                     {/* Assignee avatars */}
                     <div className="flex -space-x-1.5">
-                        {(task.assigneeIds || []).slice(0, 3).map((id: any) => {
-                            const u = users.find(
-                                (u) => u.id === id.toString()
-                            );
+                        {(() => {
+                            const assigneeIds = task.assigneeIds || [];
+                            const isAllAssigned = users.length > 0 && assigneeIds.length === users.length;
+
+                            if (isAllAssigned) {
+                                return (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Avatar className="h-5 w-5 border border-background">
+                                                <AvatarFallback className="text-[7px] bg-primary text-primary-foreground font-bold">
+                                                    ALL
+                                                </AvatarFallback>
+                                            </Avatar>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" className="text-xs">
+                                            All Members
+                                        </TooltipContent>
+                                    </Tooltip>
+                                );
+                            }
+
                             return (
-                                <Tooltip key={id.toString()}>
-                                    <TooltipTrigger asChild>
-                                        <Avatar className="h-5 w-5 border border-background">
-                                            <AvatarImage src={u?.image} />
-                                            <AvatarFallback className="text-[8px] bg-muted font-bold">
-                                                {u?.name?.charAt(0) || "?"}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="text-xs">
-                                        {u?.name || "Unknown"}
-                                    </TooltipContent>
-                                </Tooltip>
+                                <>
+                                    {assigneeIds.slice(0, 3).map((id: any) => {
+                                        const u = users.find(
+                                            (u) => u.id === id.toString()
+                                        );
+                                        return (
+                                            <Tooltip key={id.toString()}>
+                                                <TooltipTrigger asChild>
+                                                    <Avatar className="h-5 w-5 border border-background">
+                                                        <AvatarImage src={u?.image} />
+                                                        <AvatarFallback className="text-[8px] bg-muted font-bold">
+                                                            {getInitials(u?.name)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" className="text-xs">
+                                                    {u?.name || "Unknown"}
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        );
+                                    })}
+                                    {assigneeIds.length > 3 && (
+                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[8px] font-medium border border-background">
+                                            +{assigneeIds.length - 3}
+                                        </span>
+                                    )}
+                                </>
                             );
-                        })}
-                        {(task.assigneeIds || []).length > 3 && (
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[8px] font-medium border border-background">
-                                +{task.assigneeIds.length - 3}
-                            </span>
-                        )}
+                        })()}
                     </div>
                 </div>
             </div>

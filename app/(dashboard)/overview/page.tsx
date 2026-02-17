@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ClipboardList, Eye, Globe, Layers } from "lucide-react";
+import { ClipboardList, Eye, Globe, Layers, RotateCw } from "lucide-react";
+import { pusherClient } from "@/lib/pusher-client";
 
 function formatBoardDate(dateStr: string): string {
     const d = new Date(dateStr);
@@ -89,6 +90,32 @@ export default function OverviewPage() {
         }
     }, [boards]);
 
+    // Real-time updates with Pusher
+    useEffect(() => {
+        if (boards.length === 0) return;
+
+        const subscribedChannels: string[] = [];
+
+        boards.forEach((board) => {
+            const channelName = `board-${board._id}`;
+            const channel = pusherClient.subscribe(channelName);
+            subscribedChannels.push(channelName);
+
+            channel.bind("task-updated", (data: any) => {
+                // Re-fetch tasks for the updated board
+                if (data.boardId) {
+                    fetchBoardTasks(data.boardId);
+                }
+            });
+        });
+
+        return () => {
+            subscribedChannels.forEach((channelName) => {
+                pusherClient.unsubscribe(channelName);
+            });
+        };
+    }, [boards, fetchBoardTasks]);
+
     const handleTaskClick = (task: ITask, boardId: string) => {
         setSelectedTaskId(task._id.toString());
         setSelectedBoardId(boardId);
@@ -122,8 +149,28 @@ export default function OverviewPage() {
                         </div>
                     </div>
 
-                    {/* Visibility Filter */}
+                    {/* Actions: Refresh + Visibility */}
                     <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-2 text-xs"
+                            onClick={async () => {
+                                const toastId = "refresh-toast";
+                                // Optional: usage of toast if desired, but button loading state is enough
+                                await fetchRecentBoards();
+                                if (boards.length > 0) {
+                                    await fetchAllBoardTasks(boards.map((b) => b._id));
+                                }
+                            }}
+                            disabled={isLoading}
+                        >
+                            <div className={isLoading ? "animate-spin" : ""}>
+                                <RotateCw className="h-3.5 w-3.5" />
+                            </div>
+                            Refresh
+                        </Button>
+
                         <Select
                             value={visibilityFilter}
                             onValueChange={(v) =>

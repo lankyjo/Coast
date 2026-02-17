@@ -7,6 +7,7 @@ import * as taskService from "@/services/task.service";
 import * as notificationService from "@/services/notification.service";
 import { logActivity } from "./activity.actions";
 import { revalidatePath } from "next/cache";
+import { pusherServer } from "@/lib/pusher";
 
 /**
  * Get or create today's board.
@@ -167,6 +168,17 @@ export async function toggleBoardTaskDone(taskId: string) {
                 `completed "${task.title}"`,
                 { taskId }
             );
+        }
+
+        // Trigger real-time update
+        const boardId = task.dailyBoardId?.toString();
+        if (boardId) {
+            await pusherServer.trigger(`board-${boardId}`, "task-updated", {
+                taskId,
+                boardId,
+                status: newStatus,
+                updatedBy: session.user.id
+            });
         }
 
         revalidatePath("/overview");

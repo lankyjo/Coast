@@ -40,6 +40,7 @@ import {
     CommandList,
 } from "@/components/ui/command";
 import { DatePickerWithPresets } from "@/components/ui/date-picker-with-presets";
+import { getInitials } from "@/lib/user-utils";
 
 interface AddBoardTaskDialogProps {
     boardId: string;
@@ -63,8 +64,8 @@ export function AddBoardTaskDialog({ boardId, open, onOpenChange }: AddBoardTask
     const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async () => {
-        if (!title.trim() || !description.trim() || !projectId) {
-            setError("Title, description, and project are required.");
+        if (!title.trim() || !description.trim() || !projectId || !deadline) {
+            setError("Title, description, project, and due date are required.");
             return;
         }
 
@@ -240,6 +241,28 @@ export function AddBoardTaskDialog({ boardId, open, onOpenChange }: AddBoardTask
                                     <CommandList>
                                         <CommandEmpty>No users found.</CommandEmpty>
                                         <CommandGroup>
+                                            <CommandItem
+                                                onSelect={() => {
+                                                    if (assigneeIds.length === users.length) {
+                                                        setAssigneeIds([]);
+                                                    } else {
+                                                        setAssigneeIds(users.map((u) => u.id));
+                                                    }
+                                                }}
+                                                className="font-medium text-primary cursor-pointer"
+                                            >
+                                                <div
+                                                    className={cn(
+                                                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                                        assigneeIds.length === users.length
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "opacity-50 [&_svg]:invisible"
+                                                    )}
+                                                >
+                                                    <Check className="h-4 w-4" />
+                                                </div>
+                                                Select All Members
+                                            </CommandItem>
                                             {users.map((u) => {
                                                 const isSelected = assigneeIds.includes(u.id);
                                                 return (
@@ -260,7 +283,7 @@ export function AddBoardTaskDialog({ boardId, open, onOpenChange }: AddBoardTask
                                                         <Avatar className="h-5 w-5 mr-2">
                                                             <AvatarImage src={u.image} />
                                                             <AvatarFallback className="text-[8px] font-bold">
-                                                                {u.name?.charAt(0) || "?"}
+                                                                {getInitials(u.name)}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <span className="text-sm truncate">{u.name}</span>
@@ -282,7 +305,7 @@ export function AddBoardTaskDialog({ boardId, open, onOpenChange }: AddBoardTask
                                         <Avatar key={id} className="h-6 w-6 border-2 border-background">
                                             <AvatarImage src={u?.image} />
                                             <AvatarFallback className="text-[8px] bg-muted font-bold">
-                                                {u?.name?.charAt(0) || "?"}
+                                                {getInitials(u?.name)}
                                             </AvatarFallback>
                                         </Avatar>
                                     );
