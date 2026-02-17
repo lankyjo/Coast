@@ -39,6 +39,7 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
+import { DatePickerWithPresets } from "@/components/ui/date-picker-with-presets";
 
 interface AddBoardTaskDialogProps {
     boardId: string;
@@ -57,7 +58,7 @@ export function AddBoardTaskDialog({ boardId, open, onOpenChange }: AddBoardTask
     const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
     const [priority, setPriority] = useState("medium");
     const [visibility, setVisibility] = useState<"general" | "private">("general");
-    const [deadline, setDeadline] = useState("");
+    const [deadline, setDeadline] = useState<Date | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +78,7 @@ export function AddBoardTaskDialog({ boardId, open, onOpenChange }: AddBoardTask
             assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
             priority,
             visibility,
-            deadline: deadline || undefined,
+            deadline: deadline ? deadline.toISOString() : undefined,
         });
 
         if (result.success) {
@@ -88,7 +89,7 @@ export function AddBoardTaskDialog({ boardId, open, onOpenChange }: AddBoardTask
             setAssigneeIds([]);
             setPriority("medium");
             setVisibility("general");
-            setDeadline("");
+            setDeadline(undefined);
             onOpenChange(false);
         } else {
             setError(result.error || "Failed to add task");
@@ -211,11 +212,9 @@ export function AddBoardTaskDialog({ boardId, open, onOpenChange }: AddBoardTask
                     {/* Deadline */}
                     <div className="space-y-1.5">
                         <Label className="text-xs font-semibold">Due Date</Label>
-                        <Input
-                            type="date"
-                            value={deadline}
-                            onChange={(e) => setDeadline(e.target.value)}
-                            className="h-9"
+                        <DatePickerWithPresets
+                            date={deadline}
+                            setDate={setDeadline}
                         />
                     </div>
 

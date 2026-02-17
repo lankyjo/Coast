@@ -24,9 +24,9 @@ import { ClipboardList, Eye, Globe, Layers } from "lucide-react";
 
 function formatBoardDate(dateStr: string): string {
     const d = new Date(dateStr);
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${month}/${day}`;
+    const month = d.toLocaleString('default', { month: 'short' });
+    const day = d.getDate();
+    return `${month} ${day}`;
 }
 
 function isToday(dateStr: string): boolean {

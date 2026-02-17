@@ -15,7 +15,7 @@ export function useNotifications() {
         if (session?.user) {
             fetchNotifications();
         }
-    }, [fetchNotifications, session?.user]);
+    }, [fetchNotifications, session?.user?.id]);
 
     useEffect(() => {
         if (!session?.user?.id) return;

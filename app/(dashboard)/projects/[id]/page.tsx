@@ -60,6 +60,7 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
+import { DatePickerWithPresets } from "@/components/ui/date-picker-with-presets";
 import { suggestAssignee, breakDownTask, suggestDeadline } from "@/actions/ai.actions";
 import { AISuggestion, AITaskBreakdown, AIDeadlineSuggestion } from "@/types/ai.types";
 
@@ -489,12 +490,12 @@ export default function ProjectDetailPage({
                                                         </div>
                                                     )}
 
-                                                    <Input
-                                                        id="task-deadline"
-                                                        type="date"
-                                                        value={newTask.deadline}
-                                                        onChange={(e) => setNewTask((p) => ({ ...p, deadline: e.target.value }))}
-                                                    />
+                                                    <div className="w-full">
+                                                        <DatePickerWithPresets
+                                                            date={newTask.deadline ? new Date(newTask.deadline) : undefined}
+                                                            setDate={(date) => setNewTask((p) => ({ ...p, deadline: date ? date.toISOString() : "" }))}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
