@@ -1,5 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { Project, IProject } from "@/models/project.model";
+import { Task } from "@/models/task.model";
+import { Activity } from "@/models/activity.model";
 import {
     CreateProjectInput,
     UpdateProjectInput,
@@ -91,6 +93,13 @@ export async function updateProject(
 
 export async function deleteProject(id: string): Promise<boolean> {
     await connectDB();
+
     const result = await Project.findByIdAndDelete(id);
-    return !!result;
+    if (!result) return false;
+
+    // Cascade: delete all tasks and activities linked to this project
+    await Task.deleteMany({ projectId: id });
+    await Activity.deleteMany({ projectId: id });
+
+    return true;
 }

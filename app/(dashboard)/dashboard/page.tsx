@@ -59,7 +59,7 @@ export default function DashboardPage() {
 
     const stats = [
         {
-            title: isAdmin ? "Active Projects" : "My Projects",
+            title: "Active Projects",
             value: activeProjectsCount,
             icon: FolderKanban,
             description: `${projects.length} total`,

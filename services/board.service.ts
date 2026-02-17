@@ -13,14 +13,19 @@ export async function getOrCreateTodayBoard(
 ): Promise<IDailyBoard> {
     await connectDB();
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Use UTC date range to avoid timezone mismatches creating duplicate boards
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0));
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
 
-    let board = await DailyBoard.findOne({ date: today }).lean();
+    let board = await DailyBoard.findOne({
+        date: { $gte: todayStart, $lt: tomorrowStart },
+    }).lean();
 
     if (!board) {
         board = await DailyBoard.create({
-            date: today,
+            date: todayStart,
             createdBy: userId,
         });
         board = JSON.parse(JSON.stringify(board));

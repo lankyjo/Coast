@@ -3,9 +3,10 @@
 import { connectDB } from "@/lib/db";
 import { Invitation, IInvitation } from "@/models/invitation.model";
 import { requireAdmin, requireAuth } from "./auth.actions";
-import { resend } from "@/lib/resend";
-import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import mongoose from "mongoose";
 
 /**
  * List all pending invitations
@@ -28,11 +29,11 @@ export async function getInvitations() {
 }
 
 /**
- * Invite a new member
+ * Invite a new member — generates a one-time invite link (no email sent)
  */
 export async function inviteMember(data: { email: string; role: "admin" | "member"; expertise?: string[] }) {
     await requireAdmin();
-    await connectDB(); // Ensure DB connection is established
+    await connectDB();
 
     const session = await auth.api.getSession({
         headers: await headers(),
@@ -58,7 +59,9 @@ export async function inviteMember(data: { email: string; role: "admin" | "membe
     });
 
     if (existingInvite) {
-        return { error: "Invitation already sent" };
+        // Return existing link instead of blocking
+        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invitation?token=${existingInvite.token}`;
+        return { success: true, inviteUrl, data: JSON.parse(JSON.stringify(existingInvite)) };
     }
 
     const token = crypto.randomUUID();
@@ -69,45 +72,16 @@ export async function inviteMember(data: { email: string; role: "admin" | "membe
         const invitation = await Invitation.create({
             email,
             role,
-            expertise: expertise || [], // Save expertise array
+            expertise: expertise || [],
             token,
             invitedBy: session.user.id,
             expiresAt,
         });
 
-        // Send email
-        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invite?token=${token}`;
-
-        // Format expertise for email
-        const expertiseText = expertise && expertise.length > 0 ? ` with expertise in <strong>${expertise.join(", ")}</strong>` : "";
-
-        const { error } = await resend.emails.send({
-            from: "The Coast <noreply@davidcoast.com>",
-            to: email,
-            subject: "You've been invited to The Coast",
-            html: `
-                <div style="font-family: 'Inter', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 24px;">
-                    <h2 style="color: #0A0A0A; font-weight: 600; margin-bottom: 8px;">The Coast</h2>
-                    <p style="color: #737373; margin-bottom: 24px;">
-                        You have been invited to join the team as a <strong>${role}</strong>${expertiseText}.
-                    </p>
-                    <a href="${inviteUrl}" style="display: inline-block; background: #0A0A0A; color: #FFFFFF; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">
-                        Accept Invitation
-                    </a>
-                    <p style="margin-top: 24px; color: #666; font-size: 14px;">This link expires in 7 days.</p>
-                </div>
-            `,
-        });
-
-        if (error) {
-            console.error("Resend error:", error);
-            await Invitation.findByIdAndDelete(invitation._id);
-            // Return a more descriptive error if possible
-            return { error: `Failed to send email: ${error.message || "Unknown Resend error"}. Make sure your sender domain is verified in Resend.` };
-        }
+        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invitation?token=${token}`;
 
         revalidatePath("/admin");
-        return { success: true, data: JSON.parse(JSON.stringify(invitation)) };
+        return { success: true, inviteUrl, data: JSON.parse(JSON.stringify(invitation)) };
     } catch (error) {
         console.error("Invite error:", error);
         return { error: "Failed to create invitation" };
@@ -135,6 +109,11 @@ export async function revokeInvitation(id: string) {
  */
 export async function getInvitationByToken(token: string) {
     await connectDB();
+
+    if (!token || typeof token !== "string" || token.length > 100) {
+        return { error: "Invalid token" };
+    }
+
     const invitation = await Invitation.findOne({
         token,
         status: "pending",
@@ -149,12 +128,12 @@ export async function getInvitationByToken(token: string) {
 /**
  * Accept an invitation and create an account
  */
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import mongoose from "mongoose";
-
 export async function acceptInvitation(token: string, data: { name: string; password: string }) {
     await connectDB();
+
+    if (!token || typeof token !== "string" || token.length > 100) {
+        return { error: "Invalid token" };
+    }
 
     // 1. Validate invitation
     const invitation = await Invitation.findOne({
@@ -172,8 +151,8 @@ export async function acceptInvitation(token: string, data: { name: string; pass
                 email: invitation.email,
                 password: data.password,
                 name: data.name,
-                role: invitation.role, // Pass the role from invitation
-                expertise: invitation.expertise || [], // Pass expertise array
+                role: invitation.role,
+                expertise: invitation.expertise || [],
             },
             headers: await headers(),
         });
@@ -182,7 +161,7 @@ export async function acceptInvitation(token: string, data: { name: string; pass
             return { error: "Failed to create account" };
         }
 
-        // 3. Mark invitation as accepted
+        // 3. Mark invitation as accepted (one-time use)
         invitation.status = "accepted";
         await invitation.save();
 
