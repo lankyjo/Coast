@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { Notification, INotification } from "@/models/notification.model";
 import { NotificationType } from "@/types/notification.types";
+import { pusherServer } from "@/lib/pusher";
 
 export interface CreateNotificationInput {
     userId: string;
@@ -23,6 +24,18 @@ export async function createNotification(
         ...data,
         read: false,
     });
+
+    // Trigger Pusher event for real-time update
+    try {
+        // We use a private channel for each user: private-user-{userId}
+        await pusherServer.trigger(
+            `private-user-${data.userId}`,
+            "notification:new",
+            notification
+        );
+    } catch (error) {
+        console.error("Failed to trigger Pusher event:", error);
+    }
 
     return JSON.parse(JSON.stringify(notification));
 }
