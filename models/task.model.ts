@@ -33,6 +33,8 @@ export interface ITask extends Document {
     priority: "low" | "medium" | "high" | "urgent";
     deadline: Date;
     estimatedHours?: number;
+    dailyBoardId?: mongoose.Types.ObjectId;
+    visibility: "general" | "private";
     subtasks: ISubtask[];
     attachments: {
         name: string;
@@ -43,6 +45,7 @@ export interface ITask extends Document {
     }[];
     aiMetadata: IAIMetadata;
     timeEntries: ITimeEntry[];
+    totalTimeSpent: number; // in seconds
     completedAt?: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -92,6 +95,15 @@ const TaskSchema = new Schema<ITask>(
         },
         deadline: { type: Date },
         estimatedHours: { type: Number },
+        dailyBoardId: {
+            type: Schema.Types.ObjectId,
+            ref: "DailyBoard",
+        },
+        visibility: {
+            type: String,
+            enum: ["general", "private"],
+            default: "general",
+        },
         subtasks: [SubtaskSchema],
         attachments: [
             {
@@ -109,6 +121,7 @@ const TaskSchema = new Schema<ITask>(
             reasoning: { type: String },
         },
         timeEntries: [TimeEntrySchema],
+        totalTimeSpent: { type: Number, default: 0 },
         completedAt: { type: Date },
     },
     { timestamps: true }
@@ -118,6 +131,7 @@ TaskSchema.index({ projectId: 1, status: 1 });
 TaskSchema.index({ assigneeIds: 1, status: 1 });
 TaskSchema.index({ priority: 1 });
 TaskSchema.index({ deadline: 1 });
+TaskSchema.index({ dailyBoardId: 1 });
 
 export const Task: Model<ITask> =
     mongoose.models.Task || mongoose.model<ITask>("Task", TaskSchema);

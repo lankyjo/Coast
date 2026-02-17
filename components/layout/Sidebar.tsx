@@ -13,6 +13,7 @@ import {
     Settings,
     PanelLeftClose,
     PanelLeft,
+    ClipboardList,
 } from "lucide-react";
 import {
     Avatar,
@@ -35,6 +36,11 @@ import {
 } from "@/components/ui/tooltip";
 
 const NAV_ITEMS = [
+    {
+        label: "Overview",
+        href: "/overview",
+        icon: ClipboardList,
+    },
     {
         label: "Dashboard",
         href: "/dashboard",

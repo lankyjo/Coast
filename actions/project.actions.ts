@@ -4,6 +4,7 @@ import { createProjectSchema, updateProjectSchema } from "@/utils/validation";
 import { requireAuth, requireAdmin } from "./auth.actions";
 import * as projectService from "@/services/project.service";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "./activity.actions";
 
 export async function createProject(formData: unknown) {
     const session = await requireAdmin();
@@ -24,6 +25,15 @@ export async function createProject(formData: unknown) {
         );
         revalidatePath("/dashboard");
         revalidatePath("/projects");
+
+        // Log activity
+        await logActivity(
+            session.user.id,
+            project._id.toString(),
+            "project_created",
+            `created project "${project.name}"`
+        );
+
         return { success: true, data: project };
     } catch (error) {
         console.error("Failed to create project:", error);

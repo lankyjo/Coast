@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AIKeyPointsCard } from "@/components/dashboard/AIKeyPointsCard";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 
 export default function DashboardPage() {
     const { user } = useAuthStore();
@@ -52,8 +53,8 @@ export default function DashboardPage() {
 
     const activeProjectsCount = projects.filter((p) => p.status === "active").length;
     const totalTasksCount = displayTasks.length;
-    const completedTasksCount = displayTasks.filter((t) => t.status === "done").length;
-    const inProgressTasksCount = displayTasks.filter((t) => t.status === "in_progress").length;
+    const completedTasksCount = displayTasks.filter((t = {} as any) => t.status === "done").length;
+    const inProgressTasksCount = displayTasks.filter((t = {} as any) => t.status === "in_progress").length;
     const completionRate = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
     const stats = [
@@ -141,9 +142,9 @@ export default function DashboardPage() {
                 ))}
             </div>
 
-            {/* Content Grid: Recent Projects & Tasks */}
-            <div className="grid gap-4 md:grid-cols-2">
-                {/* My/Recent Tasks - Primary for Members */}
+            {/* Content Grid: Recent Projects, Tasks & Activity */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {/* My/Recent Tasks */}
                 <Card className={!isAdmin ? "md:order-1" : ""}>
                     <CardHeader>
                         <div className="flex items-center justify-between">
@@ -180,6 +181,12 @@ export default function DashboardPage() {
                                             <p className="text-sm font-medium leading-none">{task.title}</p>
                                             <p className="text-xs text-muted-foreground capitalize">
                                                 {task.priority} priority
+                                                {task.totalTimeSpent > 0 && (
+                                                    <span className="ml-2 inline-flex items-center gap-1">
+                                                        <Clock className="h-3 w-3" />
+                                                        {Math.round(task.totalTimeSpent / 60)}m
+                                                    </span>
+                                                )}
                                             </p>
                                         </div>
                                         <Badge
@@ -250,6 +257,11 @@ export default function DashboardPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Activity Feed */}
+                <div className="lg:col-span-1">
+                    <ActivityFeed />
+                </div>
             </div>
         </div>
     );

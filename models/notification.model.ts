@@ -7,7 +7,8 @@ export interface INotification extends Document {
     | "task_completed"
     | "deadline_warning"
     | "eod_report"
-    | "member_joined";
+    | "member_joined"
+    | "info";
     title: string;
     message: string;
     read: boolean;
@@ -34,6 +35,7 @@ const NotificationSchema = new Schema<INotification>(
                 "deadline_warning",
                 "eod_report",
                 "member_joined",
+                "info",
             ],
             required: true,
         },

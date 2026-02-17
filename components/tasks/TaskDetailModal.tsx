@@ -1,6 +1,5 @@
-"use client";
-
 import { useState } from "react";
+import { TimeTracker } from "./TimeTracker";
 import { ITask } from "@/models/task.model";
 import { useTaskStore } from "@/stores/task.store";
 import { useAuthStore } from "@/stores/auth.store";
@@ -144,6 +143,11 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                                 {task.description}
                             </p>
                         )}
+                        {/* Time Tracking */}
+                        <TimeTracker
+                            taskId={task._id.toString()}
+                            projectId={task.projectId.toString()}
+                        />
 
                         {/* Status + Priority Row */}
                         <div className="grid grid-cols-2 gap-4">

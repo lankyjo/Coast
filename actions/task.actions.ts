@@ -5,6 +5,7 @@ import { requireAuth, requireAdmin } from "./auth.actions";
 import * as taskService from "@/services/task.service";
 import * as notificationService from "@/services/notification.service";
 import { revalidatePath } from "next/cache";
+import { logActivity } from "./activity.actions";
 
 export async function createTask(formData: unknown) {
     try {
@@ -46,6 +47,15 @@ export async function createTask(formData: unknown) {
                 }
             }
         }
+
+        // Log activity
+        await logActivity(
+            session.user.id,
+            result.data.projectId,
+            "task_created",
+            `created task "${task.title}"`,
+            { taskId: task._id?.toString() }
+        );
 
         return { success: true, data: task };
     } catch (error: any) {
@@ -152,6 +162,38 @@ export async function updateTask(id: string, formData: unknown) {
                         console.error("Failed to send task_assigned notification:", e);
                     }
                 }
+            }
+        }
+
+        // Log status change activity
+        if (updates.status && updates.status !== existingTask.status) {
+            await logActivity(
+                session.user.id,
+                task.projectId?.toString(),
+                "status_changed",
+                `changed status of "${task.title}" to ${updates.status}`,
+                {
+                    taskId: id,
+                    previousValue: existingTask.status,
+                    newValue: updates.status,
+                }
+            );
+        }
+
+        // Log assignment activity
+        if (updates.assigneeIds && Array.isArray(updates.assigneeIds)) {
+            const oldAssigneeIds = (existingTask.assigneeIds || []).map((a: any) => a.toString());
+            const newlyAdded = updates.assigneeIds.filter(
+                (assigneeId: string) => !oldAssigneeIds.includes(assigneeId)
+            );
+            if (newlyAdded.length > 0) {
+                await logActivity(
+                    session.user.id,
+                    task.projectId?.toString(),
+                    "task_assigned",
+                    `assigned "${task.title}" to ${newlyAdded.length} members`,
+                    { taskId: id }
+                );
             }
         }
 

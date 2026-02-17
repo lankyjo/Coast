@@ -55,11 +55,14 @@ export const createTaskSchema = z.object({
         .refine((val) => !val || !isNaN(Date.parse(val)), {
             message: "Invalid date format",
         }),
+    dailyBoardId: z.string().optional(),
+    visibility: z.enum(["general", "private"]).optional(),
 });
 
 export const updateTaskSchema = z.object({
     title: z.string().min(2).optional(),
-    description: z.string().min(5).optional(),
+    description: z.string().optional(),
+    projectId: z.string().optional(),
     assigneeIds: z.array(z.string()).optional(),
     status: z
         .enum(Object.values(TASK_STATUS) as [string, ...string[]])
@@ -73,6 +76,7 @@ export const updateTaskSchema = z.object({
         .refine((val) => !val || !isNaN(Date.parse(val)), {
             message: "Invalid date format",
         }),
+    visibility: z.enum(["general", "private"]).optional(),
 });
 
 // Type exports

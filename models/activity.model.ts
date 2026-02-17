@@ -9,7 +9,8 @@ export type ActivityAction =
     | "comment_added"
     | "deadline_updated"
     | "status_changed"
-    | "member_invited";
+    | "member_invited"
+    | "time_logged";
 
 export interface IActivity extends Document {
     projectId?: mongoose.Types.ObjectId;
@@ -47,6 +48,7 @@ const ActivitySchema = new Schema<IActivity>(
                 "deadline_updated",
                 "status_changed",
                 "member_invited",
+                "time_logged",
             ],
             required: true,
         },

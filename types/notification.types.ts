@@ -3,7 +3,8 @@ export type NotificationType =
     | "task_completed"
     | "deadline_warning"
     | "eod_report"
-    | "member_joined";
+    | "member_joined"
+    | "info";
 
 export interface NotificationMetadata {
     taskId?: string;

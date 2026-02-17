@@ -36,6 +36,8 @@ export interface Task {
     priority: Priority;
     deadline: string;
     estimatedHours?: number;
+    dailyBoardId?: string;
+    visibility: "general" | "private";
     subtasks: Subtask[];
     attachments: Attachment[];
     aiMetadata: AIMetadata;
@@ -52,6 +54,8 @@ export interface CreateTaskInput {
     assigneeIds?: string[];
     priority: Priority;
     deadline?: string;
+    dailyBoardId?: string;
+    visibility?: "general" | "private";
 }
 
 export interface UpdateTaskInput {
@@ -61,6 +65,7 @@ export interface UpdateTaskInput {
     status?: TaskStatus;
     priority?: Priority;
     deadline?: string;
+    visibility?: "general" | "private";
 }
 
 export interface TaskFilters {
