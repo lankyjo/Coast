@@ -92,7 +92,7 @@ export async function getTasksForBoard(
     }
 
     const tasks = await Task.find(query)
-        .sort({ createdAt: 1 })
+        .sort({ createdAt: -1 })
         .lean();
 
     return JSON.parse(JSON.stringify(tasks));

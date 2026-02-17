@@ -69,9 +69,9 @@ export async function getTasks(filters: TaskFilters): Promise<ITask[]> {
         ];
     }
 
-    // Sort by priority (urgent first) then deadline (soonest first)
+    // Sort by recent first as requested
     const tasks = await Task.find(query)
-        .sort({ priority: 1, deadline: 1 })
+        .sort({ createdAt: -1 })
         .lean();
 
     return JSON.parse(JSON.stringify(tasks));
