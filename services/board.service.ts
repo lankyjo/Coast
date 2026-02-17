@@ -4,20 +4,19 @@ import { connectDB } from "@/lib/db";
 import { DailyBoard, IDailyBoard } from "@/models/dailyboard.model";
 import { Task, ITask } from "@/models/task.model";
 import mongoose from "mongoose";
+import { getTodayStartWAT, getTomorrowStartWAT } from "@/lib/wat-timezone";
 
 /**
  * Get or create today's board (creation requires admin userId)
+ * Uses WAT (UTC+1) to determine "today"
  */
 export async function getOrCreateTodayBoard(
     userId: string
 ): Promise<IDailyBoard> {
     await connectDB();
 
-    // Use UTC date range to avoid timezone mismatches creating duplicate boards
-    const now = new Date();
-    const todayStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0));
-    const tomorrowStart = new Date(todayStart);
-    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+    const todayStart = getTodayStartWAT();
+    const tomorrowStart = getTomorrowStartWAT();
 
     let board = await DailyBoard.findOne({
         date: { $gte: todayStart, $lt: tomorrowStart },
@@ -51,17 +50,22 @@ export async function getRecentBoards(
 }
 
 /**
- * Get a board by its date
+ * Get a board by its date (expects WAT-aligned date)
  */
 export async function getBoardByDate(
     date: Date
 ): Promise<IDailyBoard | null> {
     await connectDB();
 
-    const normalizedDate = new Date(date);
-    normalizedDate.setHours(0, 0, 0, 0);
+    // Use a date range query to match regardless of exact time
+    const start = new Date(date);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 1);
 
-    const board = await DailyBoard.findOne({ date: normalizedDate }).lean();
+    const board = await DailyBoard.findOne({
+        date: { $gte: start, $lt: end },
+    }).lean();
     if (!board) return null;
     return JSON.parse(JSON.stringify(board));
 }

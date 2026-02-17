@@ -3,6 +3,7 @@ import { Notification } from "@/models/notification.model";
 import { Activity } from "@/models/activity.model";
 import { Task } from "@/models/task.model";
 import { connectDB } from "@/lib/db";
+import { getDaysAgoWAT } from "@/lib/wat-timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,7 @@ export async function GET(req: Request) {
         const activityResult = await Activity.deleteMany({});
 
         // 3. Delete done tasks older than 7 days
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const sevenDaysAgo = getDaysAgoWAT(7);
         const taskResult = await Task.deleteMany({
             status: "done",
             updatedAt: { $lt: sevenDaysAgo },

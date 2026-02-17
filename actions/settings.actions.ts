@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/db";
 import { Notification } from "@/models/notification.model";
 import { Activity } from "@/models/activity.model";
 import { Task } from "@/models/task.model";
+import { getDaysAgoWAT } from "@/lib/wat-timezone";
 
 /**
  * Clear all read notifications
@@ -42,8 +43,7 @@ export async function clearStaleDoneTasks() {
         await requireAdmin();
         await connectDB();
 
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const sevenDaysAgo = getDaysAgoWAT(7);
 
         const result = await Task.deleteMany({
             status: "done",
