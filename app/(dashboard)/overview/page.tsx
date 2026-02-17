@@ -144,7 +144,7 @@ export default function OverviewPage() {
                         <div>
                             <h1 className="text-xl font-bold tracking-tight">Overview</h1>
                             <p className="text-xs text-muted-foreground">
-                                Daily board — plan and track each day&apos;s tasks
+                                Daily board: plan and track each day&apos;s tasks
                             </p>
                         </div>
                     </div>

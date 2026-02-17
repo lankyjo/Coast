@@ -3,7 +3,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "The Coast — Project Management",
+  title: "The Coast: Project Management",
   description:
     "Internal project management for The Coast brand design studio. AI-powered task management and team orchestration.",
 };
