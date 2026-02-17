@@ -24,6 +24,7 @@ export async function createTask(formData: unknown) {
 
         const task = await taskService.createTask(result.data as any, session.user.id);
         revalidatePath("/dashboard");
+        revalidatePath("/overview");
         revalidatePath(`/projects/${result.data.projectId}`);
 
         // Send notifications to all assignees
@@ -199,6 +200,7 @@ export async function updateTask(id: string, formData: unknown) {
 
         revalidatePath(`/projects/${task.projectId}`);
         revalidatePath("/dashboard");
+        revalidatePath("/overview");
         return { success: true, data: task };
     } catch (error: any) {
         console.error("Failed to update task:", error);
@@ -251,6 +253,7 @@ export async function deleteTask(id: string) {
         await requireAdmin();
         const success = await taskService.deleteTask(id);
         if (!success) return { success: false, error: "Task not found" };
+        revalidatePath("/overview");
         return { success: true };
     } catch (error: any) {
         console.error("Failed to delete task:", error);

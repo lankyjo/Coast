@@ -13,16 +13,27 @@ export async function createTask(
 ): Promise<ITask> {
     await connectDB();
 
+    // If no dailyBoardId is provided, assign to today's board
+    let boardId = data.dailyBoardId;
+    if (!boardId) {
+        // dynamic import to avoid circular dependency if any (though likely safe here as board service uses Task model, but Task service uses Board model... wait. board service uses Task model for getTasksForBoard. Task service uses Board model for creation? No, Board service creates Board. Task service creates Task. Circular dependency warning: board.service imports Task. task.service importing board.service might cause issues if they both run at top level. But these are functions. It should be fine?)
+        // Let's use standard import.
+        const { getOrCreateTodayBoard } = await import("@/services/board.service");
+        const todayBoard = await getOrCreateTodayBoard(userId);
+        boardId = todayBoard._id as any;
+    }
+
     const newTask = await Task.create({
         ...data,
+        dailyBoardId: boardId,
         assignedBy: userId,
         status: "todo",
         priority: data.priority,
-        // AI metadata will be populated later
+        // AI Metadata will be populated later
         aiMetadata: {
             difficultyScore: 5, // Default
         },
-        subtasks: [],
+        subtasks: data.subtasks || [],
         attachments: [],
         timeEntries: [],
     });

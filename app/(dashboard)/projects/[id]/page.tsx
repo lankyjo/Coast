@@ -42,27 +42,10 @@ import Link from "next/link";
 import { TASK_STATUS_LABELS, TASK_STATUS_ORDER, TaskStatus } from "@/constants/task-status";
 import { ITask } from "@/models/task.model";
 import { TaskDetailModal } from "@/components/tasks/TaskDetailModal";
-import { AITaskDialog } from "@/components/tasks/AITaskDialog";
-import { ProjectActions } from "@/components/projects/ProjectActions";
-import { useUserStore } from "@/stores/user.store";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command";
 import { DatePickerWithPresets } from "@/components/ui/date-picker-with-presets";
-import { suggestAssignee, breakDownTask, suggestDeadline } from "@/actions/ai.actions";
-import { AISuggestion, AITaskBreakdown, AIDeadlineSuggestion } from "@/types/ai.types";
+import { CreateTaskForm } from "@/components/tasks/CreateTaskForm";
+import { useUserStore } from "@/stores/user.store";
+import { ProjectActions } from "@/components/projects/ProjectActions";
 
 const STATUS_ICONS: Record<string, React.ElementType> = {
     todo: Circle,
@@ -90,27 +73,11 @@ export default function ProjectDetailPage({
     const { tasks, fetchTasks, createTask, viewMode, setViewMode, isLoading: tasksLoading } = useTaskStore();
     const [mounted, setMounted] = useState(false);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [newTask, setNewTask] = useState({
-        title: "",
-        description: "",
-        priority: "medium" as const,
-        deadline: "",
-        assigneeIds: [] as string[],
-    });
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-    const [isAIOpen, setIsAIOpen] = useState(false);
 
-    // AI State
-    const [aiLoading, setAiLoading] = useState<"assignee" | "breakdown" | "deadline" | null>(null);
-    const [aiSuggestions, setAiSuggestions] = useState<{
-        assignee: AISuggestion | null;
-        breakdown: AITaskBreakdown | null;
-        deadline: AIDeadlineSuggestion | null;
-    }>({
-        assignee: null,
-        breakdown: null,
-        deadline: null,
-    });
+    const handleOpenDetail = (taskId: string | null) => {
+        setSelectedTaskId(taskId);
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -129,47 +96,7 @@ export default function ProjectDetailPage({
         tasksByStatus[status] = tasks.filter((t) => t.status === status);
     });
 
-    const handleCreateTask = async () => {
-        if (!newTask.title) return;
-
-        try {
-            const result = await createTask({
-                title: newTask.title,
-                description: newTask.description,
-                projectId: id,
-                priority: newTask.priority,
-                deadline: newTask.deadline || undefined,
-                assigneeIds: newTask.assigneeIds,
-            });
-
-            if (result.success) {
-                toast.success("Task created successfully");
-                setNewTask({ title: "", description: "", priority: "medium", deadline: "", assigneeIds: [] });
-                setIsCreateOpen(false);
-            } else {
-                toast.error(result.error || "Failed to create task");
-            }
-        } catch (err) {
-            toast.error("An error occurred while creating the task");
-        }
-    };
-
-    const handleOpenDetail = (taskId: string | null) => {
-        setSelectedTaskId(taskId);
-    };
-
     const selectedTask = tasks.find(t => t._id.toString() === selectedTaskId) || null;
-
-    const handleTaskGenerated = (taskData: any) => {
-        setNewTask({
-            title: taskData.title,
-            description: taskData.description,
-            priority: taskData.priority,
-            deadline: taskData.deadline || "",
-            assigneeIds: [],
-        });
-        setIsCreateOpen(true);
-    };
 
     return (
         <div className="space-y-6">
@@ -218,11 +145,6 @@ export default function ProjectDetailPage({
 
                         {user?.role === "admin" && (
                             <>
-                                <Button variant="outline" onClick={() => setIsAIOpen(true)}>
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                    AI Draft
-                                </Button>
-
                                 {/* Create Task */}
                                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                                     <DialogTrigger asChild>
@@ -237,272 +159,11 @@ export default function ProjectDetailPage({
                                                 Add a task to {currentProject?.name || "this project"}.
                                             </DialogDescription>
                                         </DialogHeader>
-                                        <div className="grid gap-4 py-4">
-                                            {/* Title */}
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="task-title">Title</Label>
-                                                <Input
-                                                    id="task-title"
-                                                    placeholder="Task title..."
-                                                    value={newTask.title}
-                                                    onChange={(e) => setNewTask((p) => ({ ...p, title: e.target.value }))}
-                                                />
-                                            </div>
-
-                                            {/* Description + AI Buttons */}
-                                            <div className="grid gap-2">
-                                                <div className="flex items-center justify-between">
-                                                    <Label htmlFor="task-desc">Description</Label>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="xs"
-                                                            className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                            onClick={async () => {
-                                                                if (!newTask.title) return toast.error("Please enter a title first");
-                                                                setAiLoading("breakdown");
-                                                                const res = await breakDownTask(newTask.title, newTask.description);
-                                                                setAiLoading(null);
-                                                                if (res.success) setAiSuggestions(p => ({ ...p, breakdown: res.data || null }));
-                                                                else toast.error(res.error);
-                                                            }}
-                                                            disabled={!!aiLoading || !newTask.title}
-                                                        >
-                                                            {aiLoading === "breakdown" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
-                                                            Break Down
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                                <Input
-                                                    id="task-desc"
-                                                    placeholder="Description..."
-                                                    value={newTask.description}
-                                                    onChange={(e) => setNewTask((p) => ({ ...p, description: e.target.value }))}
-                                                />
-                                            </div>
-
-                                            {/* AI Breakdown Suggestion Card */}
-                                            {aiSuggestions.breakdown && (
-                                                <div className="rounded-md border border-blue-200 bg-blue-50/50 p-3 text-sm">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <span className="font-medium text-blue-900 flex items-center gap-2">
-                                                            <Sparkles className="h-4 w-4 text-blue-600" />
-                                                            AI Suggestion: Break Down
-                                                        </span>
-                                                        <div className="flex gap-2">
-                                                            <Button
-                                                                size="xs"
-                                                                variant="ghost"
-                                                                className="h-6 text-xs"
-                                                                onClick={() => setAiSuggestions(p => ({ ...p, breakdown: null }))}
-                                                            >
-                                                                Dismiss
-                                                            </Button>
-                                                            <Button
-                                                                size="xs"
-                                                                variant="outline"
-                                                                className="h-6 text-xs border-blue-200 bg-white hover:bg-blue-50 text-blue-700"
-                                                                onClick={() => {
-                                                                    const text = aiSuggestions.breakdown?.subtasks
-                                                                        .map((s: any) => `- ${s.title} (${s.estimatedMinutes}m)`).join("\n");
-                                                                    setNewTask(p => ({
-                                                                        ...p,
-                                                                        description: p.description ? `${p.description}\n\nSubtasks:\n${text}` : `Subtasks:\n${text}`
-                                                                    }));
-                                                                    setAiSuggestions(p => ({ ...p, breakdown: null }));
-                                                                }}
-                                                            >
-                                                                Append to Description
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                    <ul className="list-disc list-inside space-y-1 text-slate-700">
-                                                        {aiSuggestions.breakdown?.subtasks.map((s: any, i: number) => (
-                                                            <li key={i}>{s.title} <span className="text-slate-500 text-xs">({s.estimatedMinutes}m)</span></li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-
-                                            {/* Assignee + AI Button */}
-                                            <div className="grid gap-2">
-                                                <div className="flex items-center justify-between">
-                                                    <Label>Assign To</Label>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="xs"
-                                                        className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                                                        onClick={async () => {
-                                                            if (!newTask.title) return toast.error("Please enter a title first");
-                                                            setAiLoading("assignee");
-                                                            const res = await suggestAssignee(newTask.title, newTask.description);
-                                                            setAiLoading(null);
-                                                            if (res.success) setAiSuggestions(p => ({ ...p, assignee: res.data || null }));
-                                                            else toast.error(res.error);
-                                                        }}
-                                                        disabled={!!aiLoading || !newTask.title}
-                                                    >
-                                                        {aiLoading === "assignee" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
-                                                        Suggest Assignee
-                                                    </Button>
-                                                </div>
-
-                                                {/* AI Assignee Suggestion Card */}
-                                                {aiSuggestions.assignee && (
-                                                    <div className="rounded-md border border-purple-200 bg-purple-50/50 p-3 text-sm mb-2">
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <span className="font-medium text-purple-900 flex items-center gap-2">
-                                                                <Sparkles className="h-4 w-4 text-purple-600" />
-                                                                Suggested: {aiSuggestions.assignee.memberName}
-                                                            </span>
-                                                            <div className="flex gap-2">
-                                                                <Button
-                                                                    size="xs"
-                                                                    variant="ghost"
-                                                                    className="h-6 text-xs"
-                                                                    onClick={() => setAiSuggestions(p => ({ ...p, assignee: null }))}
-                                                                >
-                                                                    Dismiss
-                                                                </Button>
-                                                                <Button
-                                                                    size="xs"
-                                                                    variant="outline"
-                                                                    className="h-6 text-xs border-purple-200 bg-white hover:bg-purple-50 text-purple-700"
-                                                                    onClick={() => {
-                                                                        setNewTask(p => ({ ...p, assigneeIds: [aiSuggestions.assignee?.suggestedMemberId || ""] }));
-                                                                        setAiSuggestions(p => ({ ...p, assignee: null }));
-                                                                    }}
-                                                                >
-                                                                    Apply
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-purple-800 text-xs italic">{aiSuggestions.assignee.reasoning}</p>
-                                                    </div>
-                                                )}
-
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <Button
-                                                            variant="outline"
-                                                            role="combobox"
-                                                            className="justify-between"
-                                                        >
-                                                            {newTask.assigneeIds.length > 0
-                                                                ? `${newTask.assigneeIds.length} users selected`
-                                                                : "Select users..."}
-                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-[300px] p-0">
-                                                        <Command>
-                                                            <CommandInput placeholder="Search users..." />
-                                                            <CommandList>
-                                                                <CommandEmpty>No users found.</CommandEmpty>
-                                                                <CommandGroup>
-                                                                    {users.map((u) => (
-                                                                        <CommandItem
-                                                                            key={u.id}
-                                                                            onSelect={() => {
-                                                                                setNewTask(p => ({
-                                                                                    ...p,
-                                                                                    assigneeIds: p.assigneeIds.includes(u.id)
-                                                                                        ? p.assigneeIds.filter(id => id !== u.id)
-                                                                                        : [...p.assigneeIds, u.id]
-                                                                                }));
-                                                                            }}
-                                                                        >
-                                                                            <div className={cn(
-                                                                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                                                                newTask.assigneeIds.includes(u.id)
-                                                                                    ? "bg-primary text-primary-foreground"
-                                                                                    : "opacity-50 [&_svg]:invisible"
-                                                                            )}>
-                                                                                <Check className={cn("h-4 w-4")} />
-                                                                            </div>
-                                                                            <span>{u.name}</span>
-                                                                        </CommandItem>
-                                                                    ))}
-                                                                </CommandGroup>
-                                                            </CommandList>
-                                                        </Command>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="grid gap-2">
-                                                    <Label htmlFor="task-priority">Priority</Label>
-                                                    <select
-                                                        id="task-priority"
-                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                                                        value={newTask.priority}
-                                                        onChange={(e) => setNewTask((p) => ({ ...p, priority: e.target.value as any }))}
-                                                    >
-                                                        <option value="low">Low</option>
-                                                        <option value="medium">Medium</option>
-                                                        <option value="high">High</option>
-                                                        <option value="urgent">Urgent</option>
-                                                    </select>
-                                                </div>
-                                                <div className="grid gap-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label htmlFor="task-deadline">Deadline</Label>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="xs"
-                                                            className="h-6 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                                            onClick={async () => {
-                                                                if (!newTask.title) return toast.error("Please enter a title first");
-                                                                setAiLoading("deadline");
-                                                                const res = await suggestDeadline(newTask.title, newTask.description, newTask.priority);
-                                                                setAiLoading(null);
-                                                                if (res.success) setAiSuggestions(p => ({ ...p, deadline: res.data || null }));
-                                                                else toast.error(res.error);
-                                                            }}
-                                                            disabled={!!aiLoading || !newTask.title}
-                                                        >
-                                                            {aiLoading === "deadline" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
-                                                            Suggest
-                                                        </Button>
-                                                    </div>
-
-                                                    {/* AI Deadline Suggestion Card */}
-                                                    {aiSuggestions.deadline && (
-                                                        <div className="rounded-md border border-amber-200 bg-amber-50/50 p-2 text-sm mb-1">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="font-medium text-amber-900 flex items-center gap-2 text-xs">
-                                                                    <Sparkles className="h-3 w-3 text-amber-600" />
-                                                                    {new Date(aiSuggestions.deadline.suggestedDeadline).toLocaleDateString()}
-                                                                </span>
-                                                                <Button
-                                                                    size="xs"
-                                                                    variant="outline"
-                                                                    className="h-5 text-[10px] border-amber-200 bg-white hover:bg-amber-50 text-amber-700 px-2"
-                                                                    onClick={() => {
-                                                                        setNewTask(p => ({ ...p, deadline: aiSuggestions.deadline?.suggestedDeadline.split("T")[0] || "" }));
-                                                                        setAiSuggestions(p => ({ ...p, deadline: null }));
-                                                                    }}
-                                                                >
-                                                                    Apply
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="w-full">
-                                                        <DatePickerWithPresets
-                                                            date={newTask.deadline ? new Date(newTask.deadline) : undefined}
-                                                            setDate={(date) => setNewTask((p) => ({ ...p, deadline: date ? date.toISOString() : "" }))}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                                            <Button onClick={handleCreateTask} disabled={!newTask.title}>Create Task</Button>
-                                        </DialogFooter>
+                                        <CreateTaskForm
+                                            projectId={id}
+                                            onSuccess={() => setIsCreateOpen(false)}
+                                            onCancel={() => setIsCreateOpen(false)}
+                                        />
                                     </DialogContent>
                                 </Dialog>
                                 {currentProject && <ProjectActions project={currentProject} />}
@@ -683,11 +344,6 @@ export default function ProjectDetailPage({
                 onOpenChange={(open) => !open && handleOpenDetail(null)}
             />
 
-            <AITaskDialog
-                open={isAIOpen}
-                onOpenChange={setIsAIOpen}
-                onTaskGenerated={handleTaskGenerated}
-            />
         </div>
     );
 }

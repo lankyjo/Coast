@@ -382,3 +382,66 @@ export async function generateEODReport(date?: string) {
         return { success: false, error: `Failed to generate EOD report. ${error?.message || ""}` };
     }
 }
+
+// ─── Project Planning ───────────────────────────────────────
+
+const smartProjectSchema = z.object({
+    projectTitle: z.string().describe("A professional, concise title for the project"),
+    description: z.string().describe("Executive summary of the project goals"),
+    phases: z.array(z.object({
+        name: z.string().describe("Phase name (e.g., Discovery, Design, Development)"),
+        tasks: z.array(z.object({
+            title: z.string(),
+            description: z.string().describe("Actionable task description"),
+            priority: z.enum(["low", "medium", "high", "urgent"]),
+            estimatedHours: z.number().min(0.5).max(40),
+            suggestedAssigneeName: z.string().optional().describe("Name of the best-fit team member from context"),
+            role: z.string().describe("Role required (e.g., Designer, Developer)"),
+            subtasks: z.array(z.object({
+                title: z.string().describe("Specific step to complete the task"),
+            })).optional().describe("3-5 actionable subtasks"),
+        })),
+    })).describe("Sequential phases of the project"),
+    reasoning: z.string().describe("Why this structure was chosen"),
+});
+
+export async function generateProjectPlan(goal: string) {
+    await requireAuth();
+
+    try {
+        const team = await getTeamContext();
+
+        const teamContext = team.map((m) =>
+            `- ${m.name} (${m.role}): Expertise in ${m.expertise}. Active tasks: ${m.activeTasks}`
+        ).join("\n");
+
+        const { output } = await generateText({
+            model: google("gemini-2.5-flash"),
+            output: Output.object({ schema: smartProjectSchema }),
+            prompt: `
+            ${SYSTEM_PROMPT}
+
+            You are an expert Project Manager. Create a comprehensive project plan based on the user's goal.
+            
+            Goal: "${goal}"
+
+            Team Context:
+            ${teamContext}
+
+            Instructions:
+            1. Break the project into logical Phases (e.g., Strategy, Design, Dev, Launch).
+            2. Populate each phase with specific, actionable Tasks.
+            3. For each task, provide 3-5 specific SUBTASKS to make it actionable.
+            4. Estimate hours realistically.
+            5. Suggest the BEST team member for each task based on their expertise and load.
+            6. Ensure the plan is complete (start to finish).
+            `,
+        });
+
+        return { success: true, data: output };
+    } catch (error: any) {
+        console.error("AI project plan failed:", error);
+        return { success: false, error: `Failed to generate project plan. ${error?.message || ""}` };
+    }
+}
+

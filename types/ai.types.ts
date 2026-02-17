@@ -39,3 +39,27 @@ export interface AIEODReport {
     }[];
     overallProgress: string;
 }
+
+// ─── Project Planning ───────────────────────────────────────
+
+export interface SmartProjectTask {
+    title: string;
+    description: string;
+    priority: "low" | "medium" | "high" | "urgent";
+    estimatedHours: number;
+    suggestedAssigneeName?: string;
+    role?: string;
+    subtasks?: { title: string }[];
+}
+
+export interface SmartProjectPhase {
+    name: string;
+    tasks: SmartProjectTask[];
+}
+
+export interface SmartProjectPlan {
+    projectTitle: string;
+    description: string;
+    phases: SmartProjectPhase[];
+    reasoning: string;
+}

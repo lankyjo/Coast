@@ -56,6 +56,7 @@ export interface CreateTaskInput {
     deadline?: string;
     dailyBoardId?: string;
     visibility?: "general" | "private";
+    subtasks?: { title: string; done?: boolean }[];
 }
 
 export interface UpdateTaskInput {

@@ -57,6 +57,10 @@ export const createTaskSchema = z.object({
         }),
     dailyBoardId: z.string().optional(),
     visibility: z.enum(["general", "private"]).optional(),
+    subtasks: z.array(z.object({
+        title: z.string().min(1, "Subtask title is required"),
+        done: z.boolean().optional().default(false),
+    })).optional(),
 });
 
 export const updateTaskSchema = z.object({
