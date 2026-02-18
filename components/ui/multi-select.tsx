@@ -88,7 +88,7 @@ export function MultiSelect({
                     <CommandInput placeholder="Search..." />
                     <CommandList>
                         <CommandEmpty>No results found.</CommandEmpty>
-                        <CommandGroup className="max-h-64 overflow-auto">
+                        <CommandGroup>
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
