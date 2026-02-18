@@ -16,7 +16,42 @@ export const EXPERTISE_OPTIONS = [
     "Marketing Strategy",
     "Project Management",
     "SEO Specialist",
-    "Mobile App Developer"
+    "Mobile App Developer",
+
+    // Added Roles
+    "Creative Director",
+    "Art Director",
+    "Brand Manager",
+    "Content Strategist",
+    "Social Media Manager",
+    "Performance Marketer",
+    "Paid Ads Specialist",
+    "Email Marketing Specialist",
+    "Funnel Builder",
+    "Conversion Rate Optimization Specialist",
+    "Frontend Developer",
+    "Backend Developer",
+    "Full Stack Developer",
+    "WordPress Developer",
+    "E-commerce Specialist",
+    "Shopify Developer",
+    "Webflow Developer",
+    "No-Code Developer",
+    "Automation Specialist",
+    "AI Automation Specialist",
+    "Community Manager",
+    "Public Relations Specialist",
+    "Influencer Marketing Specialist",
+    "Video Editor",
+    "Podcast Producer",
+    "Script Writer",
+    "UX Researcher",
+    "Product Designer",
+    "Data Analyst",
+    "Growth Strategist",
+    "Brand Consultant",
+    "Creative Technologist"
 ] as const;
+
 
 export type Expertise = (typeof EXPERTISE_OPTIONS)[number];
