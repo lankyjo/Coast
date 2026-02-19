@@ -102,7 +102,7 @@ export function SmartProjectDialog() {
                         status: "todo",
                         priority: task.priority,
                         deadline: deadline.toISOString(), // simplified for now
-                        assigneeIds: [], // We need a way to map names to IDs, skipping for now
+                        assigneeIds: task.suggestedAssigneeIds || [], // Use AI-suggested assignees
                         assignedBy: user.id,
                         visibility: "general",
                         estimatedHours: task.estimatedHours,
@@ -233,7 +233,9 @@ export function SmartProjectDialog() {
                                                                     <div className="flex items-center gap-3 pt-1 text-xs text-slate-500">
                                                                         <div className="flex items-center gap-1">
                                                                             <User className="h-3 w-3" />
-                                                                            {task.suggestedAssigneeName || "Unassigned"}
+                                                                            {task.suggestedAssigneeNames && task.suggestedAssigneeNames.length > 0
+                                                                                ? task.suggestedAssigneeNames.join(", ")
+                                                                                : task.suggestedAssigneeName || "Unassigned"}
                                                                         </div>
                                                                         <div className="flex items-center gap-1">
                                                                             <Clock className="h-3 w-3" />

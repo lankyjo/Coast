@@ -395,7 +395,8 @@ const smartProjectSchema = z.object({
             description: z.string().describe("Actionable task description"),
             priority: z.enum(["low", "medium", "high", "urgent"]),
             estimatedHours: z.number().min(0.5).max(40),
-            suggestedAssigneeName: z.string().optional().describe("Name of the best-fit team member from context"),
+            suggestedAssigneeIds: z.array(z.string()).describe("Array of exact IDs of the best-fit team members from the team context. Can have multiple collaborators."),
+            suggestedAssigneeNames: z.array(z.string()).describe("Array of names corresponding to suggestedAssigneeIds"),
             role: z.string().describe("Role required (e.g., Designer, Developer)"),
             subtasks: z.array(z.object({
                 title: z.string().describe("Specific step to complete the task"),
@@ -433,7 +434,11 @@ export async function generateProjectPlan(goal: string) {
             2. Populate each phase with specific, actionable Tasks.
             3. For each task, provide 3-5 specific SUBTASKS to make it actionable.
             4. Estimate hours realistically.
-            5. Suggest the BEST team member for each task based on their expertise and load.
+            5. For EACH task, suggest one or more team members as collaborators based on their expertise and current workload.
+               - Use the exact member IDs from the Team Context above for "suggestedAssigneeIds".
+               - Use the corresponding member names for "suggestedAssigneeNames".
+               - A task CAN and SHOULD have multiple collaborators when the work benefits from it (e.g., design reviews, cross-functional tasks).
+               - Consider workload balance: avoid overloading one person.
             6. Ensure the plan is complete (start to finish).
             `,
         });

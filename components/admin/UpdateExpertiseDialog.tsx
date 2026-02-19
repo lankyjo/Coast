@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -30,6 +30,7 @@ interface UpdateExpertiseDialogProps {
     currentExpertise: string[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onSuccess?: (userId: string, expertise: string[]) => void;
 }
 
 export function UpdateExpertiseDialog({
@@ -37,9 +38,17 @@ export function UpdateExpertiseDialog({
     currentExpertise,
     open,
     onOpenChange,
+    onSuccess,
 }: UpdateExpertiseDialogProps) {
     const [expertise, setExpertise] = useState<string[]>(currentExpertise || []);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Re-sync local state when the dialog opens for a different user
+    useEffect(() => {
+        if (open) {
+            setExpertise(currentExpertise || []);
+        }
+    }, [open, userId, currentExpertise]);
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,6 +61,7 @@ export function UpdateExpertiseDialog({
                 toast.error(result.error);
             } else {
                 toast.success("Expertise updated successfully");
+                onSuccess?.(userId, expertise);
                 onOpenChange(false);
             }
         } catch (error) {

@@ -75,4 +75,14 @@ export interface TaskFilters {
     assignee: string | "all";
     project: string | "all";
     search: string;
+    dueToday?: boolean;
+    page?: number;
+    limit?: number;
+}
+
+export interface PaginatedTaskResult {
+    tasks: Task[];
+    total: number;
+    page: number;
+    totalPages: number;
 }

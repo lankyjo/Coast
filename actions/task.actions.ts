@@ -68,8 +68,8 @@ export async function createTask(formData: unknown) {
 export async function getTasks(filters: any) {
     try {
         await requireAuth();
-        const tasks = await taskService.getTasks(filters);
-        return { success: true, data: tasks };
+        const result = await taskService.getTasks(filters);
+        return { success: true, data: result };
     } catch (error: any) {
         console.error("Failed to fetch tasks:", error);
         return { success: false, error: error.message || "Failed to fetch tasks" };

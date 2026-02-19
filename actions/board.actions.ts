@@ -43,13 +43,14 @@ export async function getRecentBoards(limit: number = 7) {
 /**
  * Get tasks for a specific board
  */
-export async function getBoardTasks(boardId: string) {
+export async function getBoardTasks(boardId: string, boardDate?: string) {
     try {
         const session = await requireAuth();
         const tasks = await boardService.getTasksForBoard(
             boardId,
             session.user.id,
-            (session.user as any).role || "member"
+            (session.user as any).role || "member",
+            boardDate
         );
         return { success: true, data: tasks };
     } catch (error: any) {

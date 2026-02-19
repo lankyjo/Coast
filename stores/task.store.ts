@@ -16,6 +16,9 @@ interface TaskState {
     error: string | null;
     viewMode: "list" | "kanban";
     filters: TaskFilters;
+    currentPage: number;
+    totalPages: number;
+    totalTasks: number;
 
     // Actions
     fetchTasks: (filters?: Partial<TaskFilters>) => Promise<void>;
@@ -34,6 +37,9 @@ const DEFAULT_FILTERS: TaskFilters = {
     assignee: "all",
     project: "all",
     search: "",
+    dueToday: false,
+    page: 1,
+    limit: 20,
 };
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -42,6 +48,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     error: null,
     viewMode: "list",
     filters: DEFAULT_FILTERS,
+    currentPage: 1,
+    totalPages: 1,
+    totalTasks: 0,
 
     fetchTasks: async (filters = {}) => {
         set({ isLoading: true, error: null });
@@ -55,7 +64,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         try {
             const result = await getTasks(currentFilters);
             if (result.success && result.data) {
-                set({ tasks: result.data });
+                const { tasks, total, page, totalPages } = result.data as any;
+                set({
+                    tasks,
+                    currentPage: page,
+                    totalPages,
+                    totalTasks: total,
+                });
             } else {
                 set({ error: result.error || "Failed to fetch tasks" });
             }

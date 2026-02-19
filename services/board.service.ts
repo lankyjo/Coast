@@ -71,29 +71,77 @@ export async function getBoardByDate(
 }
 
 /**
- * Get tasks for a board, filtering private tasks based on user
+ * Get tasks for a board, filtering private tasks based on user.
+ * Includes:
+ *  1. Tasks explicitly linked to this board via dailyBoardId
+ *  2. Tasks whose deadline falls on the board's date
+ *  3. Multi-day tasks that span across the board's date (created before, deadline after)
  */
 export async function getTasksForBoard(
     boardId: string,
     userId: string,
-    userRole: string
+    userRole: string,
+    boardDate?: string
 ): Promise<ITask[]> {
     await connectDB();
 
-    const query: any = { dailyBoardId: new mongoose.Types.ObjectId(boardId) };
+    // Build base conditions for matching tasks to this board
+    const matchConditions: any[] = [
+        { dailyBoardId: new mongoose.Types.ObjectId(boardId) },
+    ];
+
+    // If we have the board's date, also include tasks whose deadline
+    // falls on this day, or multi-day tasks spanning this day
+    if (boardDate) {
+        const dayStart = new Date(boardDate);
+        dayStart.setUTCHours(0, 0, 0, 0);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+        // Tasks due on this day (deadline falls within the day)
+        matchConditions.push({
+            deadline: { $gte: dayStart, $lt: dayEnd },
+            dailyBoardId: { $ne: new mongoose.Types.ObjectId(boardId) }, // avoid double-counting
+        });
+
+        // Multi-day tasks that span across this day
+        // (created before or on this day, deadline on or after this day)
+        matchConditions.push({
+            createdAt: { $lt: dayEnd },
+            deadline: { $gte: dayStart },
+            dailyBoardId: { $exists: true, $ne: new mongoose.Types.ObjectId(boardId) },
+        });
+    }
+
+    const query: any = { $or: matchConditions };
 
     // If not admin, filter out private tasks not assigned to this user
     if (userRole !== "admin") {
-        query.$or = [
-            { visibility: "general" },
-            { visibility: { $exists: false } },
-            { visibility: "private", assigneeIds: { $in: [userId] } },
+        query.$and = [
+            { $or: matchConditions },
+            {
+                $or: [
+                    { visibility: "general" },
+                    { visibility: { $exists: false } },
+                    { visibility: "private", assigneeIds: { $in: [userId] } },
+                ],
+            },
         ];
+        delete query.$or;
     }
 
     const tasks = await Task.find(query)
         .sort({ createdAt: -1 })
         .lean();
 
-    return JSON.parse(JSON.stringify(tasks));
+    // De-duplicate (a task could match multiple conditions)
+    const seen = new Set<string>();
+    const unique = tasks.filter((t) => {
+        const id = t._id.toString();
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+    });
+
+    return JSON.parse(JSON.stringify(unique));
 }

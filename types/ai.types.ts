@@ -47,6 +47,9 @@ export interface SmartProjectTask {
     description: string;
     priority: "low" | "medium" | "high" | "urgent";
     estimatedHours: number;
+    suggestedAssigneeIds?: string[];
+    suggestedAssigneeNames?: string[];
+    /** @deprecated Use suggestedAssigneeNames instead */
     suggestedAssigneeName?: string;
     role?: string;
     subtasks?: { title: string }[];

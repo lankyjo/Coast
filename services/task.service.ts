@@ -41,7 +41,12 @@ export async function createTask(
     return JSON.parse(JSON.stringify(newTask));
 }
 
-export async function getTasks(filters: TaskFilters): Promise<ITask[]> {
+export async function getTasks(filters: TaskFilters): Promise<{
+    tasks: ITask[];
+    total: number;
+    page: number;
+    totalPages: number;
+}> {
     await connectDB();
 
     const query: any = {};
@@ -69,12 +74,35 @@ export async function getTasks(filters: TaskFilters): Promise<ITask[]> {
         ];
     }
 
-    // Sort by recent first as requested
-    const tasks = await Task.find(query)
-        .sort({ createdAt: -1 })
-        .lean();
+    // Due Today filter: tasks whose deadline falls within today
+    if (filters.dueToday) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(todayStart);
+        todayEnd.setDate(todayEnd.getDate() + 1);
+        query.deadline = { $gte: todayStart, $lt: todayEnd };
+    }
 
-    return JSON.parse(JSON.stringify(tasks));
+    // Pagination
+    const page = filters.page || 1;
+    const limit = filters.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const [tasks, total] = await Promise.all([
+        Task.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Task.countDocuments(query),
+    ]);
+
+    return {
+        tasks: JSON.parse(JSON.stringify(tasks)),
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+    };
 }
 
 export async function getTaskById(id: string): Promise<ITask | null> {

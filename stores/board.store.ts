@@ -24,8 +24,8 @@ interface BoardState {
     // Actions
     fetchRecentBoards: () => Promise<void>;
     ensureTodayBoard: () => Promise<DailyBoard | null>;
-    fetchBoardTasks: (boardId: string) => Promise<void>;
-    fetchAllBoardTasks: (boardIds: string[]) => Promise<void>;
+    fetchBoardTasks: (boardId: string, boardDate?: string) => Promise<void>;
+    fetchAllBoardTasks: (boards: { id: string; date: string }[]) => Promise<void>;
     addTaskToBoard: (
         boardId: string,
         taskData: {
@@ -96,9 +96,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         }
     },
 
-    fetchBoardTasks: async (boardId: string) => {
+    fetchBoardTasks: async (boardId: string, boardDate?: string) => {
         try {
-            const result = await getBoardTasks(boardId);
+            const result = await getBoardTasks(boardId, boardDate);
             if (result.success && result.data) {
                 set((state) => ({
                     boardTasks: {
@@ -112,18 +112,18 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         }
     },
 
-    fetchAllBoardTasks: async (boardIds: string[]) => {
-        if (boardIds.length === 0) return;
+    fetchAllBoardTasks: async (boards: { id: string; date: string }[]) => {
+        if (boards.length === 0) return;
 
         try {
-            const promises = boardIds.map(id => getBoardTasks(id));
+            const promises = boards.map(b => getBoardTasks(b.id, b.date));
             const results = await Promise.all(promises);
 
             const newBoardTasks: Record<string, ITask[]> = {};
 
             results.forEach((result, index) => {
                 if (result.success && result.data) {
-                    newBoardTasks[boardIds[index]] = result.data as ITask[];
+                    newBoardTasks[boards[index].id] = result.data as ITask[];
                 }
             });
 

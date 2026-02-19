@@ -80,12 +80,12 @@ export default function OverviewPage() {
     // Fetch tasks for all boards once boards are loaded
     useEffect(() => {
         if (boards.length > 0) {
-            const boardIdsToFetch = boards
+            const boardsToFetch = boards
                 .filter(b => !boardTasks[b._id])
-                .map(b => b._id);
+                .map(b => ({ id: b._id, date: b.date }));
 
-            if (boardIdsToFetch.length > 0) {
-                fetchAllBoardTasks(boardIdsToFetch);
+            if (boardsToFetch.length > 0) {
+                fetchAllBoardTasks(boardsToFetch);
             }
         }
     }, [boards]);
@@ -104,7 +104,8 @@ export default function OverviewPage() {
             channel.bind("task-updated", (data: any) => {
                 // Re-fetch tasks for the updated board
                 if (data.boardId) {
-                    fetchBoardTasks(data.boardId);
+                    const matchedBoard = boards.find(b => b._id === data.boardId);
+                    fetchBoardTasks(data.boardId, matchedBoard?.date);
                 }
             });
         });
@@ -160,7 +161,7 @@ export default function OverviewPage() {
                                 // Optional: usage of toast if desired, but button loading state is enough
                                 await fetchRecentBoards();
                                 if (boards.length > 0) {
-                                    await fetchAllBoardTasks(boards.map((b) => b._id));
+                                    await fetchAllBoardTasks(boards.map((b) => ({ id: b._id, date: b.date })));
                                 }
                             }}
                             disabled={isLoading}

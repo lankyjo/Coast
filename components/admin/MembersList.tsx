@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Table,
     TableBody,
@@ -53,8 +53,23 @@ interface MembersListProps {
 }
 
 export function MembersList({ initialMembers, initialInvitations }: MembersListProps) {
+    const [members, setMembers] = useState<User[]>(initialMembers);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [updateExpertiseOpen, setUpdateExpertiseOpen] = useState(false);
+
+    // Sync local state when initialMembers changes (e.g. after server revalidation)
+    useEffect(() => {
+        setMembers(initialMembers);
+    }, [initialMembers]);
+
+    // Called after a successful expertise update to patch local state immediately
+    const handleExpertiseUpdate = (userId: string, expertise: string[]) => {
+        setMembers((prev) =>
+            prev.map((m) =>
+                m._id === userId ? { ...m, expertise } : m
+            )
+        );
+    };
 
     // ... handlers ...
     const handleRoleChange = async (userId: string, newRole: "admin" | "member") => {
@@ -115,7 +130,7 @@ export function MembersList({ initialMembers, initialInvitations }: MembersListP
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {initialMembers.map((member) => (
+                        {members.map((member) => (
                             <TableRow key={member._id}>
                                 <TableCell className="flex items-center gap-3">
                                     <Avatar className="h-8 w-8">
@@ -180,6 +195,7 @@ export function MembersList({ initialMembers, initialInvitations }: MembersListP
                     currentExpertise={getExpertiseArray(selectedUser.expertise)}
                     open={updateExpertiseOpen}
                     onOpenChange={setUpdateExpertiseOpen}
+                    onSuccess={handleExpertiseUpdate}
                 />
             )}
 

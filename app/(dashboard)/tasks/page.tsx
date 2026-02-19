@@ -29,6 +29,9 @@ import {
     X,
     User,
     Users,
+    ChevronLeft,
+    ChevronRight,
+    CalendarClock,
 } from "lucide-react";
 import {
     Tabs,
@@ -63,6 +66,9 @@ export default function TasksPage() {
         setViewMode,
         filters,
         setFilters,
+        currentPage,
+        totalPages,
+        totalTasks,
     } = useTaskStore();
     const { projects, fetchProjects } = useProjectStore();
     const { user } = useAuthStore();
@@ -96,23 +102,34 @@ export default function TasksPage() {
     });
 
     const handleStatusFilter = (status: TaskStatus | "all") => {
-        setFilters({ status });
-        fetchTasks({ status });
+        setFilters({ status, page: 1 });
+        fetchTasks({ status, page: 1 });
     };
 
     const handlePriorityFilter = (priority: Priority | "all") => {
-        setFilters({ priority });
-        fetchTasks({ priority });
+        setFilters({ priority, page: 1 });
+        fetchTasks({ priority, page: 1 });
     };
 
     const handleProjectFilter = (project: string | "all") => {
-        setFilters({ project });
-        fetchTasks({ project });
+        setFilters({ project, page: 1 });
+        fetchTasks({ project, page: 1 });
     };
 
     const handleAssigneeFilter = (assignee: string | "all") => {
-        setFilters({ assignee });
-        fetchTasks({ assignee });
+        setFilters({ assignee, page: 1 });
+        fetchTasks({ assignee, page: 1 });
+    };
+
+    const handleDueTodayFilter = () => {
+        const newDueToday = !filters.dueToday;
+        setFilters({ dueToday: newDueToday, page: 1 });
+        fetchTasks({ dueToday: newDueToday, page: 1 });
+    };
+
+    const handlePageChange = (page: number) => {
+        setFilters({ page });
+        fetchTasks({ page });
     };
 
     const handleOpenDetail = (taskId: string | null) => {
@@ -124,11 +141,12 @@ export default function TasksPage() {
     const activeFilterCount =
         (filters.status !== "all" ? 1 : 0) +
         (filters.priority !== "all" ? 1 : 0) +
-        (filters.project !== "all" ? 1 : 0);
+        (filters.project !== "all" ? 1 : 0) +
+        (filters.dueToday ? 1 : 0);
 
     const clearFilters = () => {
-        setFilters({ status: "all", priority: "all", project: "all" });
-        fetchTasks({ status: "all", priority: "all", project: "all" });
+        setFilters({ status: "all", priority: "all", project: "all", dueToday: false, page: 1 });
+        fetchTasks({ status: "all", priority: "all", project: "all", dueToday: false, page: 1 });
     };
 
     // Group by status for Kanban
@@ -239,6 +257,17 @@ export default function TasksPage() {
                             <X className="mr-1 h-3 w-3" /> Clear ({activeFilterCount})
                         </Button>
                     )}
+
+                    {/* Due Today Filter */}
+                    <Button
+                        variant={filters.dueToday ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={handleDueTodayFilter}
+                    >
+                        <CalendarClock className="h-3.5 w-3.5" />
+                        Due Today
+                    </Button>
                 </div>
 
                 {/* View Toggle */}
@@ -431,6 +460,39 @@ export default function TasksPage() {
                 </Card>
             )}
 
+            {/* Pagination Controls */}
+            {!isLoading && filteredTasks.length > 0 && totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4">
+                    <span className="text-sm text-muted-foreground">
+                        Showing {((currentPage - 1) * (filters.limit || 20)) + 1}–{Math.min(currentPage * (filters.limit || 20), totalTasks)} of {totalTasks} tasks
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1"
+                            disabled={currentPage <= 1}
+                            onClick={() => handlePageChange(currentPage - 1)}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            Previous
+                        </Button>
+                        <span className="text-sm font-medium px-2">
+                            {currentPage} / {totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1"
+                            disabled={currentPage >= totalPages}
+                            onClick={() => handlePageChange(currentPage + 1)}
+                        >
+                            Next
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
             {/* Task Detail Modal */}
             <TaskDetailModal
                 key={selectedTaskId || "task-detail-modal"}
