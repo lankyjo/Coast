@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { CrmTemplate } from "@/models/template.model";
 import { TemplateSend } from "@/models/template-send.model";
+import "@/models/user.model"; // Register User schema for populate
 import type { ICrmTemplate } from "@/models/template.model";
 import mongoose from "mongoose";
 

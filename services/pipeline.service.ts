@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/db";
 import { Prospect } from "@/models/prospect.model";
 import { PipelineHistory } from "@/models/pipeline-history.model";
 import { CrmActivity } from "@/models/crm-activity.model";
+import "@/models/user.model"; // Register User schema for populate
 import type { PipelineStage } from "@/types/crm.types";
 import mongoose from "mongoose";
 

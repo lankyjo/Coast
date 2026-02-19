@@ -1,5 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { CrmActivity } from "@/models/crm-activity.model";
+import "@/models/user.model"; // Register User schema for populate
+import "@/models/prospect.model"; // Register Prospect schema for populate
 import type { CrmActivityType, ActivityOutcome } from "@/types/crm.types";
 import mongoose from "mongoose";
 

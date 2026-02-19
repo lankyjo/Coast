@@ -7,17 +7,8 @@ export interface IProspect extends Document {
     phone?: string;
     website?: string;
     address?: string;
-    market: "DFW" | "North Alabama" | "Other";
-    category:
-    | "Roofing"
-    | "Builders"
-    | "Landscaping"
-    | "Pools"
-    | "Real Estate"
-    | "Property Mgmt"
-    | "Auto Detail"
-    | "Cleaning"
-    | "Custom";
+    market: string;
+    category: string;
     weakness_score: number;
     weakness_notes?: string;
     google_rating?: number;
@@ -72,22 +63,12 @@ const ProspectSchema = new Schema<IProspect>(
         address: { type: String, trim: true },
         market: {
             type: String,
-            enum: ["DFW", "North Alabama", "Other"],
+            trim: true,
             default: "Other",
         },
         category: {
             type: String,
-            enum: [
-                "Roofing",
-                "Builders",
-                "Landscaping",
-                "Pools",
-                "Real Estate",
-                "Property Mgmt",
-                "Auto Detail",
-                "Cleaning",
-                "Custom",
-            ],
+            trim: true,
             default: "Custom",
         },
         weakness_score: { type: Number, min: 1, max: 5, default: 3 },

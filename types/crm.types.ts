@@ -1,17 +1,8 @@
 // ─── CRM Types ───────────────────────────────────────────
 
-export type Market = "DFW" | "North Alabama" | "Other";
+export type Market = string;
 
-export type ProspectCategory =
-    | "Roofing"
-    | "Builders"
-    | "Landscaping"
-    | "Pools"
-    | "Real Estate"
-    | "Property Mgmt"
-    | "Auto Detail"
-    | "Cleaning"
-    | "Custom";
+export type ProspectCategory = string;
 
 export type PipelineStage =
     | "new_lead"
@@ -190,8 +181,8 @@ export interface AutomationConfig {
 // ─── Filter / Query types ────────────────────────────────
 
 export interface ProspectFilters {
-    market: Market | "all";
-    category: ProspectCategory | "all";
+    market: string | "all";
+    category: string | "all";
     pipeline_stage: PipelineStage | "all";
     weakness_score_min: number;
     weakness_score_max: number;

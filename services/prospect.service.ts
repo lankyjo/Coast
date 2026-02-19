@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/db";
 import { Prospect, IProspect } from "@/models/prospect.model";
+import "@/models/user.model"; // Register User schema for populate
 import type { ProspectFilters, ProspectSort } from "@/types/crm.types";
 import mongoose from "mongoose";
 
