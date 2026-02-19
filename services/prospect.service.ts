@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/db";
 import { Prospect, IProspect } from "@/models/prospect.model";
+import { CrmActivity } from "@/models/crm-activity.model";
 import "@/models/user.model"; // Register User schema for populate
 import type { ProspectFilters, ProspectSort } from "@/types/crm.types";
 import mongoose from "mongoose";
@@ -48,9 +49,25 @@ export async function updateProspect(
 /**
  * Delete a prospect
  */
-export async function deleteProspect(id: string): Promise<boolean> {
+export async function deleteProspect(id: string, userId: string): Promise<boolean> {
     await connectDB();
+
+    // Get name before deleting
+    const prospect = await Prospect.findById(id).select("business_name").lean();
+    if (!prospect) return false;
+
     const result = await Prospect.findByIdAndDelete(id);
+
+    if (result) {
+        await CrmActivity.create({
+            prospect_id: new mongoose.Types.ObjectId(id),
+            performed_by: new mongoose.Types.ObjectId(userId),
+            activity_type: "prospect_deleted",
+            subject: `Prospect Deleted: ${prospect.business_name}`,
+            is_automated: false
+        });
+    }
+
     return !!result;
 }
 
@@ -305,4 +322,31 @@ export async function importProspects(
     }
 
     return { imported, skipped, errors };
+}
+
+/**
+ * Bulk delete prospects
+ */
+export async function bulkDeleteProspects(ids: string[], userId: string): Promise<boolean> {
+    await connectDB();
+
+    // Get names before deleting
+    const prospects = await Prospect.find({ _id: { $in: ids } }).select("business_name").lean();
+    if (prospects.length === 0) return false;
+
+    const result = await Prospect.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount > 0) {
+        // Log activities for each deleted prospect
+        const activities = prospects.map((p) => ({
+            prospect_id: p._id,
+            performed_by: new mongoose.Types.ObjectId(userId),
+            activity_type: "prospect_deleted",
+            subject: `Prospect Deleted: ${p.business_name}`,
+            is_automated: false,
+        }));
+        await CrmActivity.insertMany(activities);
+    }
+
+    return result.deletedCount > 0;
 }

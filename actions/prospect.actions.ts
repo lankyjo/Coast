@@ -40,10 +40,10 @@ export async function updateProspect(id: string, data: Partial<IProspect>) {
  * Delete a prospect
  */
 export async function deleteProspect(id: string) {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     try {
-        const deleted = await ProspectService.deleteProspect(id);
+        const deleted = await ProspectService.deleteProspect(id, session.user.id);
         if (!deleted) return { error: "Prospect not found" };
         return { success: true };
     } catch (error) {
@@ -133,5 +133,21 @@ export async function importProspects(rows: Partial<IProspect>[]) {
         return { success: true, data: result };
     } catch (error) {
         return { error: "Failed to import prospects" };
+    }
+}
+
+/**
+ * Bulk delete prospects
+ */
+export async function bulkDeleteProspects(ids: string[]) {
+    const session = await requireAdmin();
+
+    try {
+        const deleted = await ProspectService.bulkDeleteProspects(ids, session.user.id);
+        if (!deleted) return { error: "No prospects were deleted" };
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to bulk delete prospects:", error);
+        return { error: "Failed to bulk delete prospects" };
     }
 }

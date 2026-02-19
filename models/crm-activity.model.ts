@@ -14,6 +14,7 @@ export interface ICrmActivity extends Document {
     | "auto_follow_up"
     | "auto_thank_you"
     | "stage_changed"
+    | "prospect_deleted"
     | "other";
     subject: string;
     details?: string;
@@ -35,7 +36,6 @@ const CrmActivitySchema = new Schema<ICrmActivity>(
         prospect_id: {
             type: Schema.Types.ObjectId,
             ref: "Prospect",
-            required: true,
         },
         performed_by: {
             type: Schema.Types.ObjectId,
@@ -55,6 +55,7 @@ const CrmActivitySchema = new Schema<ICrmActivity>(
                 "auto_follow_up",
                 "auto_thank_you",
                 "stage_changed",
+                "prospect_deleted",
                 "other",
             ],
             required: true,

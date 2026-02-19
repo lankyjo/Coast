@@ -46,6 +46,7 @@ export type CrmActivityType =
     | "auto_follow_up"
     | "auto_thank_you"
     | "stage_changed"
+    | "prospect_deleted"
     | "other";
 
 export type ActivityOutcome =

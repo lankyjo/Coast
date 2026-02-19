@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useProspectStore } from "@/stores/prospect.store";
-import { getProspects } from "@/actions/prospect.actions";
+import { getProspects, bulkDeleteProspects } from "@/actions/prospect.actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 import {
     Select,
     SelectContent,
@@ -31,6 +33,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Star,
+    Trash2,
+    Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import type { Prospect, PipelineStage, ProspectCategory, Market } from "@/types/crm.types";
@@ -82,6 +86,9 @@ export default function ProspectsPage() {
         setPage,
     } = useProspectStore();
 
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const loadProspects = useCallback(async () => {
         setLoading(true);
         try {
@@ -104,6 +111,42 @@ export default function ProspectsPage() {
     useEffect(() => {
         loadProspects();
     }, [loadProspects]);
+
+    // Selection handlers
+    const toggleAll = () => {
+        if (selectedIds.length === prospects.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(prospects.map((p) => p._id));
+        }
+    };
+
+    const toggleOne = (id: string) => {
+        setSelectedIds((prev) =>
+            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleDeleteSelected = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} prospects?`)) return;
+
+        setIsDeleting(true);
+        try {
+            const result = await bulkDeleteProspects(selectedIds);
+            if (result.success) {
+                toast.success(`Deleted ${selectedIds.length} prospects`);
+                setSelectedIds([]);
+                loadProspects();
+            } else {
+                toast.error(result.error || "Failed to delete");
+            }
+        } catch (err) {
+            toast.error("An error occurred");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     if (isLoading && prospects.length === 0) {
         return (
@@ -130,12 +173,30 @@ export default function ProspectsPage() {
                         {total} prospects in database
                     </p>
                 </div>
-                <Link href="/crm/prospects/new">
-                    <Button className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add Prospect
-                    </Button>
-                </Link>
+                <div className="flex gap-2">
+                    {selectedIds.length > 0 && (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            className="gap-2"
+                            onClick={handleDeleteSelected}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Trash2 className="h-4 w-4" />
+                            )}
+                            Delete ({selectedIds.length})
+                        </Button>
+                    )}
+                    <Link href="/crm/prospects/new">
+                        <Button size="sm" className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            Add Prospect
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             {/* Filters & Search */}
@@ -231,6 +292,13 @@ export default function ProspectsPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-[50px]">
+                                    <Checkbox
+                                        checked={prospects.length > 0 && selectedIds.length === prospects.length}
+                                        onCheckedChange={toggleAll}
+                                        aria-label="Select all"
+                                    />
+                                </TableHead>
                                 <TableHead>Business</TableHead>
                                 <TableHead>Category</TableHead>
                                 <TableHead>Market</TableHead>
@@ -242,6 +310,13 @@ export default function ProspectsPage() {
                         <TableBody>
                             {prospects.map((p) => (
                                 <TableRow key={p._id} className="cursor-pointer hover:bg-muted/50">
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                        <Checkbox
+                                            checked={selectedIds.includes(p._id)}
+                                            onCheckedChange={() => toggleOne(p._id)}
+                                            aria-label={`Select ${p.business_name}`}
+                                        />
+                                    </TableCell>
                                     <TableCell>
                                         <Link href={`/crm/prospects/${p._id}`} className="block">
                                             <p className="font-medium">{p.business_name}</p>
@@ -271,34 +346,43 @@ export default function ProspectsPage() {
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {prospects.map((p) => (
-                        <Link key={p._id} href={`/crm/prospects/${p._id}`}>
-                            <Card className="border-0 shadow-sm transition-shadow hover:shadow-md cursor-pointer">
-                                <CardContent className="p-4 space-y-3">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <h3 className="font-semibold">{p.business_name}</h3>
-                                            {p.owner_name && (
-                                                <p className="text-xs text-muted-foreground">{p.owner_name}</p>
-                                            )}
-                                        </div>
-                                        <Badge variant={STATUS_BADGE[p.pipeline_stage]?.variant || "secondary"} className="text-[10px]">
-                                            {STATUS_BADGE[p.pipeline_stage]?.label || p.pipeline_stage}
-                                        </Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs text-muted-foreground">{p.category} · {p.market}</span>
-                                        <WeaknessScore score={p.weakness_score} />
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {p.tags?.slice(0, 3).map((tag) => (
-                                            <Badge key={tag} variant="outline" className="text-[10px]">
-                                                {tag}
+                        <div key={p._id} className="relative group">
+                            <div className="absolute top-3 left-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Checkbox
+                                    checked={selectedIds.includes(p._id)}
+                                    onCheckedChange={() => toggleOne(p._id)}
+                                    className="bg-background shadow-md border-primary"
+                                />
+                            </div>
+                            <Link href={`/crm/prospects/${p._id}`}>
+                                <Card className={`border-0 shadow-sm transition-all hover:shadow-md cursor-pointer ${selectedIds.includes(p._id) ? 'ring-2 ring-primary' : ''}`}>
+                                    <CardContent className="p-4 space-y-3">
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <h3 className="font-semibold">{p.business_name}</h3>
+                                                {p.owner_name && (
+                                                    <p className="text-xs text-muted-foreground">{p.owner_name}</p>
+                                                )}
+                                            </div>
+                                            <Badge variant={STATUS_BADGE[p.pipeline_stage]?.variant || "secondary"} className="text-[10px]">
+                                                {STATUS_BADGE[p.pipeline_stage]?.label || p.pipeline_stage}
                                             </Badge>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-muted-foreground">{p.category} · {p.market}</span>
+                                            <WeaknessScore score={p.weakness_score} />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {p.tags?.slice(0, 3).map((tag) => (
+                                                <Badge key={tag} variant="outline" className="text-[10px]">
+                                                    {tag}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        </div>
                     ))}
                 </div>
             )}
