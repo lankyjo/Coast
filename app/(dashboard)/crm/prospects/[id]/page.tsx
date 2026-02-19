@@ -32,10 +32,12 @@ import {
     PhoneCall,
     Calendar,
     StickyNote,
+    Send,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
+import SendEmailModal from "@/components/crm/SendEmailModal";
 import type { Prospect, CrmActivity, CrmActivityType, ActivityOutcome } from "@/types/crm.types";
 
 const STAGE_COLORS: Record<string, string> = {
@@ -80,6 +82,7 @@ export default function ProspectDetailPage() {
         subject: "",
         details: "",
     });
+    const [showEmailModal, setShowEmailModal] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -195,6 +198,9 @@ export default function ProspectDetailPage() {
                         </>
                     ) : (
                         <>
+                            <Button variant="outline" size="sm" onClick={() => setShowEmailModal(true)} className="gap-1">
+                                <Send className="h-4 w-4" /> Send Email
+                            </Button>
                             <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                                 <Edit2 className="h-4 w-4 mr-1" /> Edit
                             </Button>
@@ -444,6 +450,15 @@ export default function ProspectDetailPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Send Email Modal */}
+            {prospect && (
+                <SendEmailModal
+                    open={showEmailModal}
+                    onClose={() => setShowEmailModal(false)}
+                    prospect={prospect}
+                />
+            )}
         </div>
     );
 }

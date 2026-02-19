@@ -104,7 +104,7 @@ export default function PipelinePage() {
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-hidden">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Sales Pipeline</h1>
@@ -129,8 +129,8 @@ export default function PipelinePage() {
                 ))}
             </div>
 
-            {/* Kanban Board */}
-            <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 md:-mx-8 md:px-8">
+            {/* Kanban Board — scrolls horizontally within page only */}
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
                 {columns.map((col) => (
                     <div
                         key={col.stage}
@@ -187,8 +187,8 @@ export default function PipelinePage() {
                                                                 <Star
                                                                     key={i}
                                                                     className={`h-2.5 w-2.5 ${i <= prospect.weakness_score
-                                                                            ? "text-yellow-500 fill-yellow-500"
-                                                                            : "text-muted-foreground/20"
+                                                                        ? "text-yellow-500 fill-yellow-500"
+                                                                        : "text-muted-foreground/20"
                                                                         }`}
                                                                 />
                                                             ))}

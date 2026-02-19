@@ -18,6 +18,9 @@ import {
     Kanban,
     Mail,
     BarChart3,
+    Zap,
+    Send,
+    Upload,
 } from "lucide-react";
 import {
     Avatar,
@@ -137,6 +140,9 @@ export function Sidebar() {
         { label: "Prospects", href: "/crm/prospects", icon: Users },
         { label: "Pipeline", href: "/crm/pipeline", icon: Kanban },
         { label: "Templates", href: "/crm/templates", icon: Mail },
+        { label: "Outreach", href: "/crm/outreach", icon: Send },
+        { label: "Automation", href: "/crm/automation", icon: Zap },
+        { label: "Import", href: "/crm/import", icon: Upload },
     ];
 
     const WorkspaceItems = ({ collapsed }: { collapsed: boolean }) => (
