@@ -66,29 +66,29 @@ export default function OverviewPage() {
     useEffect(() => {
         const init = async () => {
             try {
-                await fetchUsers();
-                await fetchProjects();
-                await ensureTodayBoard();
+                await Promise.all([
+                    fetchUsers(),
+                    fetchProjects(),
+                    ensureTodayBoard()
+                ]);
                 await fetchRecentBoards();
+
+                const currentBoards = useBoardStore.getState().boards;
+                const currentTasks = useBoardStore.getState().boardTasks;
+
+                const boardsToFetch = currentBoards
+                    .filter(b => !currentTasks[b._id])
+                    .map(b => ({ id: b._id, date: b.date }));
+
+                if (boardsToFetch.length > 0) {
+                    await fetchAllBoardTasks(boardsToFetch);
+                }
             } finally {
                 setIsInitializing(false);
             }
         };
         init();
     }, []);
-
-    // Fetch tasks for all boards once boards are loaded
-    useEffect(() => {
-        if (boards.length > 0) {
-            const boardsToFetch = boards
-                .filter(b => !boardTasks[b._id])
-                .map(b => ({ id: b._id, date: b.date }));
-
-            if (boardsToFetch.length > 0) {
-                fetchAllBoardTasks(boardsToFetch);
-            }
-        }
-    }, [boards]);
 
     // Real-time updates with Pusher
     useEffect(() => {
@@ -135,7 +135,7 @@ export default function OverviewPage() {
 
     return (
         <TooltipProvider>
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full w-full overflow-hidden">
                 {/* Page Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b">
                     <div className="flex items-center gap-3">
@@ -157,11 +157,10 @@ export default function OverviewPage() {
                             size="sm"
                             className="h-8 gap-2 text-xs"
                             onClick={async () => {
-                                const toastId = "refresh-toast";
-                                // Optional: usage of toast if desired, but button loading state is enough
                                 await fetchRecentBoards();
-                                if (boards.length > 0) {
-                                    await fetchAllBoardTasks(boards.map((b) => ({ id: b._id, date: b.date })));
+                                const currentBoards = useBoardStore.getState().boards;
+                                if (currentBoards.length > 0) {
+                                    await fetchAllBoardTasks(currentBoards.map((b) => ({ id: b._id, date: b.date })));
                                 }
                             }}
                             disabled={isLoading}
@@ -208,7 +207,7 @@ export default function OverviewPage() {
 
                 {/* Board Container */}
                 {isLoading || isInitializing ? (
-                    <div className="flex gap-4 p-6 overflow-x-auto">
+                    <div className="flex gap-4 p-6 overflow-x-auto flex-1 min-h-0">
                         {[1, 2, 3].map((i) => (
                             <div key={i} className="w-[300px] shrink-0 space-y-3">
                                 <Skeleton className="h-10 w-full rounded-lg" />
@@ -228,7 +227,7 @@ export default function OverviewPage() {
                         </p>
                     </div>
                 ) : (
-                    <div className="flex gap-4 p-6 overflow-x-auto flex-1">
+                    <div className="flex gap-4 p-6 overflow-x-auto flex-1 min-h-0">
                         {boards.map((board: DailyBoard) => {
                             const tasks = boardTasks[board._id] || [];
                             const filtered = getFilteredTasks(tasks);

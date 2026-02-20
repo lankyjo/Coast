@@ -104,7 +104,7 @@ export default function PipelinePage() {
     }
 
     return (
-        <div className="space-y-4 overflow-hidden">
+        <div className="flex flex-col h-full space-y-4 overflow-hidden">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Sales Pipeline</h1>
@@ -130,7 +130,7 @@ export default function PipelinePage() {
             </div>
 
             {/* Kanban Board — scrolls horizontally within page only */}
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+            <div className="flex-1 flex gap-4 overflow-x-auto pb-4 scrollbar-thin min-h-0">
                 {columns.map((col) => (
                     <div
                         key={col.stage}

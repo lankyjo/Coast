@@ -19,7 +19,7 @@ export default function RootLayout({
       <body className="min-h-screen">
         <KeyboardAwareness />
         {children}
-        <Toaster />
+        <Toaster richColors />
       </body>
     </html>
   );
