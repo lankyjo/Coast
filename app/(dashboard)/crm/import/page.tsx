@@ -26,8 +26,8 @@ interface ParsedRow {
     address?: string;
     market?: string;
     category?: string;
-    weakness_score?: number;
-    weakness_notes?: string;
+    rating_score?: number;
+    rating_notes?: string;
     notes?: string;
     tags?: string[];
     [key: string]: unknown;
@@ -46,8 +46,10 @@ function parseCSV(text: string): ParsedRow[] {
 
         headers.forEach((header, idx) => {
             if (values[idx]) {
-                if (header === "weakness_score") {
-                    row[header] = parseInt(values[idx]) || 3;
+                if (header === "weakness_score" || header === "rating_score") {
+                    row["rating_score"] = parseInt(values[idx]) || 3;
+                } else if (header === "weakness_notes" || header === "rating_notes") {
+                    row["rating_notes"] = values[idx];
                 } else if (header === "tags") {
                     row[header] = values[idx].split(";").map((t: string) => t.trim()).filter(Boolean);
                 } else {
@@ -118,8 +120,8 @@ export default function ImportPage() {
         "address",
         "market",
         "category",
-        "weakness_score",
-        "weakness_notes",
+        "rating_score",
+        "rating_notes",
         "notes",
         "tags",
     ];

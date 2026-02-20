@@ -216,14 +216,14 @@ export default function AutomationSettingsPage() {
                                 <div className="flex items-center gap-3">
                                     <div
                                         className={`rounded-lg p-2 ${config.enabled
-                                                ? "bg-green-50"
-                                                : "bg-muted"
+                                            ? "bg-green-50"
+                                            : "bg-muted"
                                             }`}
                                     >
                                         <Zap
                                             className={`h-4 w-4 ${config.enabled
-                                                    ? "text-green-600"
-                                                    : "text-muted-foreground"
+                                                ? "text-green-600"
+                                                : "text-muted-foreground"
                                                 }`}
                                         />
                                     </div>
@@ -309,7 +309,7 @@ export default function AutomationSettingsPage() {
                                         {linkedTemplate.name}
                                     </Badge>
                                 )}
-                                {config.target_categories.length > 0 && (
+                                {(config.target_categories?.length || 0) > 0 && (
                                     <Badge variant="outline" className="text-[10px]">
                                         {config.target_categories.join(", ")}
                                     </Badge>
