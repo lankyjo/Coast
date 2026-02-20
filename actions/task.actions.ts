@@ -30,7 +30,7 @@ export async function createTask(formData: unknown) {
         // Send notifications to all assignees
         const assigneeIds = result.data.assigneeIds || [];
         for (const assigneeId of assigneeIds) {
-            if (assigneeId !== session.user.id) {
+            if (assigneeId.toString() !== session.user.id) {
                 try {
                     await notificationService.createNotification({
                         userId: assigneeId,
@@ -142,11 +142,11 @@ export async function updateTask(id: string, formData: unknown) {
         if (updates.assigneeIds && Array.isArray(updates.assigneeIds)) {
             const oldAssigneeIds = (existingTask.assigneeIds || []).map((a: any) => a.toString());
             const newlyAdded = updates.assigneeIds.filter(
-                (assigneeId: string) => !oldAssigneeIds.includes(assigneeId)
+                (assigneeId: string) => !oldAssigneeIds.includes(assigneeId.toString())
             );
 
             for (const assigneeId of newlyAdded) {
-                if (assigneeId !== session.user.id) {
+                if (assigneeId.toString() !== session.user.id) {
                     try {
                         await notificationService.createNotification({
                             userId: assigneeId,

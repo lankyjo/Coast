@@ -84,8 +84,8 @@ export interface Prospect {
     address?: string;
     market: Market;
     category: ProspectCategory;
-    weakness_score: number;
-    weakness_notes?: string;
+    rating_score: number;
+    rating_notes?: string;
     google_rating?: number;
     review_count?: number;
     social_facebook?: string;
@@ -185,8 +185,8 @@ export interface ProspectFilters {
     market: string | "all";
     category: string | "all";
     pipeline_stage: PipelineStage | "all";
-    weakness_score_min: number;
-    weakness_score_max: number;
+    rating_score_min: number;
+    rating_score_max: number;
     contacted: "all" | "yes" | "no";
     responded: "all" | "yes" | "no";
     deal_closed: "all" | "yes" | "no";
@@ -196,7 +196,7 @@ export interface ProspectFilters {
 }
 
 export interface ProspectSort {
-    field: "weakness_score" | "business_name" | "createdAt" | "pipeline_stage" | "contacted_at";
+    field: "rating_score" | "business_name" | "createdAt" | "pipeline_stage" | "contacted_at";
     direction: "asc" | "desc";
 }
 

@@ -59,6 +59,7 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
     const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
     const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
     const [visibility, setVisibility] = useState<"general" | "private">("general");
+    const [startDate, setStartDate] = useState<Date | undefined>(undefined);
     const [deadline, setDeadline] = useState<Date | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -89,6 +90,7 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
                 assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
                 priority,
                 visibility,
+                startDate: startDate ? startDate.toISOString() : undefined,
                 deadline: deadline ? deadline.toISOString() : undefined,
             };
 
@@ -286,66 +288,75 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
                 </div>
             </div>
 
-            {/* Deadline + AI Suggestion */}
-            <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold">Due Date</Label>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-2"
-                        onClick={async () => {
-                            if (!title) return toast.error("Please enter a title first");
-                            setAiLoading("deadline");
-                            const res = await suggestDeadline(title, description, priority);
-                            setAiLoading(null);
-                            if (res.success) setAiSuggestions(p => ({ ...p, deadline: res.data || null }));
-                            else toast.error(res.error);
-                        }}
-                        disabled={!!aiLoading || !title}
-                    >
-                        {aiLoading === "deadline" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
-                        Suggest
-                    </Button>
+            {/* Dates (Start Date + Deadline) + AI Suggestion */}
+            <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Start Date</Label>
+                    <DatePickerWithPresets
+                        date={startDate}
+                        setDate={setStartDate}
+                    />
                 </div>
+                <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">Due Date</Label>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-2"
+                            onClick={async () => {
+                                if (!title) return toast.error("Please enter a title first");
+                                setAiLoading("deadline");
+                                const res = await suggestDeadline(title, description, priority);
+                                setAiLoading(null);
+                                if (res.success) setAiSuggestions(p => ({ ...p, deadline: res.data || null }));
+                                else toast.error(res.error);
+                            }}
+                            disabled={!!aiLoading || !title}
+                        >
+                            {aiLoading === "deadline" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
+                            Suggest
+                        </Button>
+                    </div>
 
-                {/* AI Deadline Suggestion */}
-                {aiSuggestions.deadline && (
-                    <div className="rounded-md border border-amber-200 bg-amber-50/50 p-2 text-sm mb-1">
-                        <div className="flex items-center justify-between">
-                            <span className="font-medium text-amber-900 flex items-center gap-2 text-xs">
-                                <Sparkles className="h-3 w-3 text-amber-600" />
-                                {new Date(aiSuggestions.deadline.suggestedDeadline).toLocaleDateString()}
-                            </span>
-                            <div className="flex gap-2">
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-5 text-[10px] px-2"
-                                    onClick={() => setAiSuggestions(p => ({ ...p, deadline: null }))}
-                                >
-                                    Dismiss
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-5 text-[10px] border-amber-200 bg-white hover:bg-amber-50 text-amber-700 px-2"
-                                    onClick={() => {
-                                        setDeadline(new Date(aiSuggestions.deadline!.suggestedDeadline));
-                                        setAiSuggestions(p => ({ ...p, deadline: null }));
-                                    }}
-                                >
-                                    Apply
-                                </Button>
+                    {/* AI Deadline Suggestion */}
+                    {aiSuggestions.deadline && (
+                        <div className="rounded-md border border-amber-200 bg-amber-50/50 p-2 text-sm mb-1">
+                            <div className="flex items-center justify-between">
+                                <span className="font-medium text-amber-900 flex items-center gap-2 text-xs">
+                                    <Sparkles className="h-3 w-3 text-amber-600" />
+                                    {new Date(aiSuggestions.deadline.suggestedDeadline).toLocaleDateString()}
+                                </span>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-5 text-[10px] px-2"
+                                        onClick={() => setAiSuggestions(p => ({ ...p, deadline: null }))}
+                                    >
+                                        Dismiss
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-5 text-[10px] border-amber-200 bg-white hover:bg-amber-50 text-amber-700 px-2"
+                                        onClick={() => {
+                                            setDeadline(new Date(aiSuggestions.deadline!.suggestedDeadline));
+                                            setAiSuggestions(p => ({ ...p, deadline: null }));
+                                        }}
+                                    >
+                                        Apply
+                                    </Button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                <DatePickerWithPresets
-                    date={deadline}
-                    setDate={setDeadline}
-                />
+                    <DatePickerWithPresets
+                        date={deadline}
+                        setDate={setDeadline}
+                    />
+                </div>
             </div>
 
             {/* Assignees + AI Suggestion */}

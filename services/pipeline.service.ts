@@ -100,7 +100,7 @@ export async function getProspectsByStage() {
     await connectDB();
 
     const prospects = await Prospect.find()
-        .sort({ weakness_score: -1, updatedAt: -1 })
+        .sort({ rating_score: -1, updatedAt: -1 })
         .populate("assigned_to", "name image")
         .lean();
 

@@ -32,6 +32,7 @@ export interface ITask extends Document {
     status: "todo" | "in_progress" | "in_review" | "done";
     priority: "low" | "medium" | "high" | "urgent";
     deadline: Date;
+    startDate?: Date;
     estimatedHours?: number;
     dailyBoardId?: mongoose.Types.ObjectId;
     visibility: "general" | "private";
@@ -94,6 +95,7 @@ const TaskSchema = new Schema<ITask>(
             default: "medium",
         },
         deadline: { type: Date },
+        startDate: { type: Date },
         estimatedHours: { type: Number },
         dailyBoardId: {
             type: Schema.Types.ObjectId,

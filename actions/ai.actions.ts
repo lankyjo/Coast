@@ -16,6 +16,7 @@ const taskSchema = z.object({
     priority: z.enum(["low", "medium", "high", "urgent"]).describe("Priority level based on urgency and impact"),
     subtasks: z.array(z.string()).describe("List of subtasks to complete the main task"),
     estimatedHours: z.number().optional().describe("Estimated hours to complete the task"),
+    startDate: z.string().optional().describe("ISO date string for the start date, if mentioned"),
     deadline: z.string().optional().describe("ISO date string for the deadline, if mentioned"),
 });
 

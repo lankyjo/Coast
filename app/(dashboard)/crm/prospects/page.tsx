@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { useProspectStore } from "@/stores/prospect.store";
 import { getProspects, bulkDeleteProspects } from "@/actions/prospect.actions";
+import { getUsers } from "@/actions/user.actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: "default" | "second
     nurture: { label: "Nurture", variant: "secondary" },
 };
 
-function WeaknessScore({ score }: { score: number }) {
+function RatingScore({ score }: { score: number }) {
     const colors = ["", "text-green-500", "text-lime-500", "text-yellow-500", "text-orange-500", "text-red-500"];
     return (
         <div className="flex items-center gap-0.5">
@@ -88,6 +89,7 @@ export default function ProspectsPage() {
 
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
 
     const loadProspects = useCallback(async () => {
         setLoading(true);
@@ -111,6 +113,12 @@ export default function ProspectsPage() {
     useEffect(() => {
         loadProspects();
     }, [loadProspects]);
+
+    useEffect(() => {
+        getUsers().then((res) => {
+            if (res.data) setUsers(res.data);
+        });
+    }, []);
 
     // Selection handlers
     const toggleAll = () => {
@@ -258,6 +266,24 @@ export default function ProspectsPage() {
                     </SelectContent>
                 </Select>
 
+                <Select
+                    value={filters.assigned_to}
+                    onValueChange={(v) => setFilters({ assigned_to: v })}
+                >
+                    <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Assignee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Any Assignee</SelectItem>
+                        <SelectItem value="mine">Assigned to Me</SelectItem>
+                        {users.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>
+                                {u.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
                 <div className="flex items-center border rounded-md">
                     <Button
                         variant={viewMode === "list" ? "secondary" : "ghost"}
@@ -302,7 +328,7 @@ export default function ProspectsPage() {
                                 <TableHead>Business</TableHead>
                                 <TableHead>Category</TableHead>
                                 <TableHead>Market</TableHead>
-                                <TableHead>Weakness</TableHead>
+                                <TableHead>Rating</TableHead>
                                 <TableHead>Stage</TableHead>
                                 <TableHead>Assigned</TableHead>
                             </TableRow>
@@ -328,7 +354,7 @@ export default function ProspectsPage() {
                                     <TableCell className="text-sm">{p.category}</TableCell>
                                     <TableCell className="text-sm">{p.market}</TableCell>
                                     <TableCell>
-                                        <WeaknessScore score={p.weakness_score} />
+                                        <RatingScore score={p.rating_score} />
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={STATUS_BADGE[p.pipeline_stage]?.variant || "secondary"}>
@@ -370,7 +396,7 @@ export default function ProspectsPage() {
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-xs text-muted-foreground">{p.category} · {p.market}</span>
-                                            <WeaknessScore score={p.weakness_score} />
+                                            <RatingScore score={p.rating_score} />
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {p.tags?.slice(0, 3).map((tag) => (

@@ -131,15 +131,15 @@ export async function getProspects(options: {
             query.assigned_to = new mongoose.Types.ObjectId(filters.assigned_to);
         }
         if (
-            filters.weakness_score_min !== undefined ||
-            filters.weakness_score_max !== undefined
+            filters.rating_score_min !== undefined ||
+            filters.rating_score_max !== undefined
         ) {
-            query.weakness_score = {};
-            if (filters.weakness_score_min !== undefined) {
-                (query.weakness_score as Record<string, number>).$gte = filters.weakness_score_min;
+            query.rating_score = {};
+            if (filters.rating_score_min !== undefined) {
+                (query.rating_score as Record<string, number>).$gte = filters.rating_score_min;
             }
-            if (filters.weakness_score_max !== undefined) {
-                (query.weakness_score as Record<string, number>).$lte = filters.weakness_score_max;
+            if (filters.rating_score_max !== undefined) {
+                (query.rating_score as Record<string, number>).$lte = filters.rating_score_max;
             }
         }
         if (filters.search) {
@@ -152,7 +152,7 @@ export async function getProspects(options: {
     if (sort) {
         sortObj[sort.field] = sort.direction === "asc" ? 1 : -1;
     } else {
-        sortObj.weakness_score = -1; // Default: highest weakness first
+        sortObj.rating_score = -1; // Default: highest rating first
     }
 
     const skip = (page - 1) * limit;

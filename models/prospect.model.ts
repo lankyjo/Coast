@@ -9,8 +9,8 @@ export interface IProspect extends Document {
     address?: string;
     market: string;
     category: string;
-    weakness_score: number;
-    weakness_notes?: string;
+    rating_score: number;
+    rating_notes?: string;
     google_rating?: number;
     review_count?: number;
     social_facebook?: string;
@@ -71,8 +71,8 @@ const ProspectSchema = new Schema<IProspect>(
             trim: true,
             default: "Custom",
         },
-        weakness_score: { type: Number, min: 1, max: 5, default: 3 },
-        weakness_notes: { type: String },
+        rating_score: { type: Number, min: 1, max: 5, default: 3 },
+        rating_notes: { type: String },
         google_rating: { type: Number, min: 0, max: 5 },
         review_count: { type: Number, min: 0 },
         social_facebook: { type: String },
@@ -138,7 +138,7 @@ const ProspectSchema = new Schema<IProspect>(
 // Targeted indexes — minimal to stay storage-conscious
 ProspectSchema.index({ pipeline_stage: 1 });
 ProspectSchema.index({ market: 1, category: 1 });
-ProspectSchema.index({ weakness_score: -1 });
+ProspectSchema.index({ rating_score: -1 });
 ProspectSchema.index({ assigned_to: 1 });
 ProspectSchema.index({ business_name: 1, market: 1 }, { unique: true });
 // Text index for full-text search

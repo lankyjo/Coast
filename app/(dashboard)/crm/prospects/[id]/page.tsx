@@ -198,7 +198,14 @@ export default function ProspectDetailPage() {
                         </>
                     ) : (
                         <>
-                            <Button variant="outline" size="sm" onClick={() => setShowEmailModal(true)} className="gap-1">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowEmailModal(true)}
+                                className="gap-1"
+                                disabled={!prospect.email}
+                                title={!prospect.email ? "Prospect has no email address" : "Send Email"}
+                            >
                                 <Send className="h-4 w-4" /> Send Email
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
@@ -218,41 +225,108 @@ export default function ProspectDetailPage() {
                     <CardHeader>
                         <div className="flex items-start justify-between">
                             <div>
-                                <CardTitle className="text-xl">{prospect.business_name}</CardTitle>
-                                {prospect.owner_name && (
-                                    <p className="text-sm text-muted-foreground mt-1">{prospect.owner_name}</p>
+                                {isEditing ? (
+                                    <>
+                                        <Input
+                                            value={editData.business_name || ""}
+                                            onChange={(e) => setEditData({ ...editData, business_name: e.target.value })}
+                                            className="font-bold text-xl mb-2 h-9"
+                                            placeholder="Business Name"
+                                        />
+                                        <Input
+                                            value={editData.owner_name || ""}
+                                            onChange={(e) => setEditData({ ...editData, owner_name: e.target.value })}
+                                            className="text-sm h-8"
+                                            placeholder="Owner Name"
+                                        />
+                                    </>
+                                ) : (
+                                    <>
+                                        <CardTitle className="text-xl">{prospect.business_name}</CardTitle>
+                                        {prospect.owner_name && (
+                                            <p className="text-sm text-muted-foreground mt-1">{prospect.owner_name}</p>
+                                        )}
+                                    </>
                                 )}
                             </div>
-                            <Badge className={STAGE_COLORS[prospect.pipeline_stage] || ""}>
-                                {prospect.pipeline_stage.replace(/_/g, " ")}
-                            </Badge>
+                            <Select
+                                value={prospect.pipeline_stage}
+                                onValueChange={async (v) => {
+                                    try {
+                                        const res = await updateProspect(id, { pipeline_stage: v as any });
+                                        if (res.data) {
+                                            setProspect(res.data);
+                                            toast.success("Stage updated");
+                                        }
+                                    } catch {
+                                        toast.error("Failed to update stage");
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className={`w-[140px] h-7 text-xs ${STAGE_COLORS[prospect.pipeline_stage] || ""}`}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.entries(STAGE_COLORS).map(([stage, color]) => (
+                                        <SelectItem key={stage} value={stage}>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${color.split(' ')[0]}`} />
+                                                {stage.replace(/_/g, " ")}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid gap-3 sm:grid-cols-2">
-                            {prospect.email && (
-                                <div className="flex items-center gap-2 text-sm">
-                                    <Mail className="h-4 w-4 text-muted-foreground" />
-                                    <a href={`mailto:${prospect.email}`} className="text-primary hover:underline">{prospect.email}</a>
-                                </div>
-                            )}
-                            {prospect.phone && (
-                                <div className="flex items-center gap-2 text-sm">
-                                    <Phone className="h-4 w-4 text-muted-foreground" />
-                                    {prospect.phone}
-                                </div>
-                            )}
-                            {prospect.website && (
-                                <div className="flex items-center gap-2 text-sm">
-                                    <Globe className="h-4 w-4 text-muted-foreground" />
-                                    <a href={prospect.website} target="_blank" className="text-primary hover:underline truncate">{prospect.website}</a>
-                                </div>
-                            )}
-                            {prospect.address && (
-                                <div className="flex items-center gap-2 text-sm">
-                                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                                    {prospect.address}
-                                </div>
+                            {isEditing ? (
+                                <>
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <Input value={editData.email || ""} onChange={(e) => setEditData({ ...editData, email: e.target.value })} placeholder="Email" className="h-8" />
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <Input value={editData.phone || ""} onChange={(e) => setEditData({ ...editData, phone: e.target.value })} placeholder="Phone" className="h-8" />
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <Input value={editData.website || ""} onChange={(e) => setEditData({ ...editData, website: e.target.value })} placeholder="Website" className="h-8" />
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <Input value={editData.address || ""} onChange={(e) => setEditData({ ...editData, address: e.target.value })} placeholder="Address" className="h-8" />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    {prospect.email && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Mail className="h-4 w-4 text-muted-foreground" />
+                                            <a href={`mailto:${prospect.email}`} className="text-primary hover:underline">{prospect.email}</a>
+                                        </div>
+                                    )}
+                                    {prospect.phone && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Phone className="h-4 w-4 text-muted-foreground" />
+                                            {prospect.phone}
+                                        </div>
+                                    )}
+                                    {prospect.website && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Globe className="h-4 w-4 text-muted-foreground" />
+                                            <a href={prospect.website} target="_blank" className="text-primary hover:underline truncate">{prospect.website}</a>
+                                        </div>
+                                    )}
+                                    {prospect.address && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                                            {prospect.address}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 
@@ -268,19 +342,35 @@ export default function ProspectDetailPage() {
                                 <p className="text-sm font-medium">{prospect.market}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground font-medium">Weakness Score</p>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                    {[1, 2, 3, 4, 5].map((i) => (
-                                        <Star key={i} className={`h-4 w-4 ${i <= prospect.weakness_score ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground/20"}`} />
-                                    ))}
-                                </div>
+                                <p className="text-xs text-muted-foreground font-medium">Rating Score</p>
+                                {isEditing ? (
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        {[1, 2, 3, 4, 5].map((i) => (
+                                            <Button
+                                                key={i}
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 p-0"
+                                                onClick={() => setEditData({ ...editData, rating_score: i })}
+                                            >
+                                                <Star className={`h-4 w-4 ${i <= (editData.rating_score || 0) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground/20"}`} />
+                                            </Button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        {[1, 2, 3, 4, 5].map((i) => (
+                                            <Star key={i} className={`h-4 w-4 ${i <= prospect.rating_score ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground/20"}`} />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {prospect.weakness_notes && (
+                        {prospect.rating_notes && (
                             <div>
-                                <p className="text-xs text-muted-foreground font-medium mb-1">Weakness Notes</p>
-                                <p className="text-sm bg-muted/50 rounded-lg p-3">{prospect.weakness_notes}</p>
+                                <p className="text-xs text-muted-foreground font-medium mb-1">Rating Notes</p>
+                                <p className="text-sm bg-muted/50 rounded-lg p-3">{prospect.rating_notes}</p>
                             </div>
                         )}
 

@@ -166,48 +166,48 @@ export default function PipelinePage() {
                                             }
                                             className="cursor-grab active:cursor-grabbing rounded-lg bg-background p-3 shadow-sm border border-transparent hover:border-primary/20 transition-all"
                                         >
-                                            <Link href={`/crm/prospects/${prospect._id}`}>
-                                                <div className="space-y-2">
-                                                    <div className="flex items-start justify-between">
-                                                        <h4 className="text-sm font-medium leading-tight">
+                                            <div className="space-y-2">
+                                                <div className="flex items-start justify-between">
+                                                    <Link href={`/crm/prospects/${prospect._id}`}>
+                                                        <h4 className="text-sm font-medium leading-tight hover:underline text-primary">
                                                             {prospect.business_name}
                                                         </h4>
-                                                        {daysSinceUpdate >= 14 ? (
-                                                            <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                                                        ) : daysSinceUpdate >= 7 ? (
-                                                            <Clock className="h-3.5 w-3.5 text-orange-500 shrink-0" />
-                                                        ) : null}
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-muted-foreground">
-                                                            {prospect.category}
-                                                        </span>
-                                                        <div className="flex items-center gap-0.5">
-                                                            {[1, 2, 3, 4, 5].map((i) => (
-                                                                <Star
-                                                                    key={i}
-                                                                    className={`h-2.5 w-2.5 ${i <= prospect.weakness_score
-                                                                        ? "text-yellow-500 fill-yellow-500"
-                                                                        : "text-muted-foreground/20"
-                                                                        }`}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-muted-foreground">
-                                                            {typeof prospect.assigned_to === "object"
-                                                                ? prospect.assigned_to.name
-                                                                : "—"}
-                                                        </span>
-                                                        {daysSinceUpdate > 0 && (
-                                                            <span className="text-[10px] text-muted-foreground">
-                                                                {daysSinceUpdate}d
-                                                            </span>
-                                                        )}
+                                                    </Link>
+                                                    {daysSinceUpdate >= 14 ? (
+                                                        <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                                                    ) : daysSinceUpdate >= 7 ? (
+                                                        <Clock className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                                                    ) : null}
+                                                </div>
+                                                <div className="flex items-center justify-between pointer-events-none">
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        {prospect.category}
+                                                    </span>
+                                                    <div className="flex items-center gap-0.5">
+                                                        {[1, 2, 3, 4, 5].map((i) => (
+                                                            <Star
+                                                                key={i}
+                                                                className={`h-2.5 w-2.5 ${i <= prospect.rating_score
+                                                                    ? "text-yellow-500 fill-yellow-500"
+                                                                    : "text-muted-foreground/20"
+                                                                    }`}
+                                                            />
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            </Link>
+                                                <div className="flex items-center justify-between pointer-events-none">
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        {typeof prospect.assigned_to === "object"
+                                                            ? prospect.assigned_to.name
+                                                            : "—"}
+                                                    </span>
+                                                    {daysSinceUpdate > 0 && (
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            {daysSinceUpdate}d
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     );
                                 })

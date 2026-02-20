@@ -38,8 +38,8 @@ const defaultFilters: ProspectFilters = {
     market: "all",
     category: "all",
     pipeline_stage: "all",
-    weakness_score_min: 1,
-    weakness_score_max: 5,
+    rating_score_min: 1,
+    rating_score_max: 5,
     contacted: "all",
     responded: "all",
     deal_closed: "all",
@@ -57,7 +57,7 @@ export const useProspectStore = create<ProspectStore>((set) => ({
     isLoading: false,
     viewMode: "list",
     filters: defaultFilters,
-    sort: { field: "weakness_score", direction: "desc" },
+    sort: { field: "rating_score", direction: "desc" },
     selectedIds: [],
 
     setProspects: (prospects, total, page, totalPages) =>

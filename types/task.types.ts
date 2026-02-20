@@ -35,6 +35,7 @@ export interface Task {
     status: TaskStatus;
     priority: Priority;
     deadline: string;
+    startDate?: string;
     estimatedHours?: number;
     dailyBoardId?: string;
     visibility: "general" | "private";
@@ -54,6 +55,7 @@ export interface CreateTaskInput {
     assigneeIds?: string[];
     priority: Priority;
     deadline?: string;
+    startDate?: string;
     dailyBoardId?: string;
     visibility?: "general" | "private";
     subtasks?: { title: string; done?: boolean }[];
@@ -66,6 +68,7 @@ export interface UpdateTaskInput {
     status?: TaskStatus;
     priority?: Priority;
     deadline?: string;
+    startDate?: string;
     visibility?: "general" | "private";
 }
 

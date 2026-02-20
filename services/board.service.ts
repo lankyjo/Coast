@@ -90,26 +90,32 @@ export async function getTasksForBoard(
         { dailyBoardId: new mongoose.Types.ObjectId(boardId) },
     ];
 
-    // If we have the board's date, also include tasks whose deadline
-    // falls on this day, or multi-day tasks spanning this day
+    // If we have the board's date, also include tasks whose active date range
+    // falls on this day.
+    // i.e startDate <= boardDate <= deadline
     if (boardDate) {
         const dayStart = new Date(boardDate);
         dayStart.setUTCHours(0, 0, 0, 0);
         const dayEnd = new Date(dayStart);
         dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
 
-        // Tasks due on this day (deadline falls within the day)
+        // Include a task if the board's day is within its [startDate, deadline] range
         matchConditions.push({
-            deadline: { $gte: dayStart, $lt: dayEnd },
+            $and: [
+                {
+                    $or: [
+                        { startDate: { $lte: dayEnd } },     // Has startDate and started before the end of the board day
+                        { createdAt: { $lt: dayEnd }, startDate: { $exists: false } } // Fallback to createdAt if no startDate
+                    ]
+                },
+                {
+                    $or: [
+                        { deadline: { $gte: dayStart } },    // Has deadline and due on or after the start of the board day
+                        { deadline: { $exists: false } }     // No deadline, show indefinitely
+                    ]
+                }
+            ],
             dailyBoardId: { $ne: new mongoose.Types.ObjectId(boardId) }, // avoid double-counting
-        });
-
-        // Multi-day tasks that span across this day
-        // (created before or on this day, deadline on or after this day)
-        matchConditions.push({
-            createdAt: { $lt: dayEnd },
-            deadline: { $gte: dayStart },
-            dailyBoardId: { $exists: true, $ne: new mongoose.Types.ObjectId(boardId) },
         });
     }
 

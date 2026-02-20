@@ -431,22 +431,46 @@ export function BoardTaskModal({ taskId, boardId, open, onOpenChange }: BoardTas
 
                             <Separator />
 
-                            {/* Due Date */}
-                            <div className="space-y-2">
-                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                                    <CalendarIcon className="h-3 w-3" />
-                                    Due Date
-                                </label>
-                                <div className={cn(!canEditDetails && "pointer-events-none opacity-80")}>
-                                    <DatePickerWithPresets
-                                        date={task.deadline ? new Date(task.deadline) : undefined}
-                                        setDate={async (date) => {
-                                            if (canEditDetails && date) {
-                                                await updateTask(task._id.toString(), { deadline: date.toISOString() });
-                                                await fetchBoardTasks(boardId);
-                                            }
-                                        }}
-                                    />
+                            <Separator />
+
+                            {/* Dates (Start & Due) */}
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Start Date */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                        <CalendarIcon className="h-3 w-3" />
+                                        Start Date
+                                    </label>
+                                    <div className={cn(!canEditDetails && "pointer-events-none opacity-80")}>
+                                        <DatePickerWithPresets
+                                            date={task.startDate ? new Date(task.startDate) : undefined}
+                                            setDate={async (date) => {
+                                                if (canEditDetails && date) {
+                                                    await updateTask(task._id.toString(), { startDate: date.toISOString() });
+                                                    await fetchBoardTasks(boardId);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Due Date */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                        <CalendarIcon className="h-3 w-3" />
+                                        Due Date
+                                    </label>
+                                    <div className={cn(!canEditDetails && "pointer-events-none opacity-80")}>
+                                        <DatePickerWithPresets
+                                            date={task.deadline ? new Date(task.deadline) : undefined}
+                                            setDate={async (date) => {
+                                                if (canEditDetails && date) {
+                                                    await updateTask(task._id.toString(), { deadline: date.toISOString() });
+                                                    await fetchBoardTasks(boardId);
+                                                }
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 

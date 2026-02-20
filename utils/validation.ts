@@ -55,6 +55,12 @@ export const createTaskSchema = z.object({
         .refine((val) => !val || !isNaN(Date.parse(val)), {
             message: "Invalid date format",
         }),
+    startDate: z
+        .string()
+        .optional()
+        .refine((val) => !val || !isNaN(Date.parse(val)), {
+            message: "Invalid date format",
+        }),
     dailyBoardId: z.string().optional(),
     visibility: z.enum(["general", "private"]).optional(),
     subtasks: z.array(z.object({
@@ -75,6 +81,12 @@ export const updateTaskSchema = z.object({
         .enum(Object.values(PRIORITY) as [string, ...string[]])
         .optional(),
     deadline: z
+        .string()
+        .optional()
+        .refine((val) => !val || !isNaN(Date.parse(val)), {
+            message: "Invalid date format",
+        }),
+    startDate: z
         .string()
         .optional()
         .refine((val) => !val || !isNaN(Date.parse(val)), {

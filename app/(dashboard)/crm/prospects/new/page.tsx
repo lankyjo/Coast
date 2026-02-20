@@ -31,8 +31,8 @@ export default function NewProspectPage() {
         address: "",
         market: "Other",
         category: "Custom",
-        weakness_score: 3,
-        weakness_notes: "",
+        rating_score: 3,
+        rating_notes: "",
         google_rating: "",
         review_count: "",
         social_facebook: "",
@@ -65,8 +65,8 @@ export default function NewProspectPage() {
                 address: form.address.trim() || undefined,
                 market: form.market as any,
                 category: form.category as any,
-                weakness_score: form.weakness_score,
-                weakness_notes: form.weakness_notes.trim() || undefined,
+                rating_score: form.rating_score,
+                rating_notes: form.rating_notes.trim() || undefined,
                 google_rating: form.google_rating ? parseFloat(form.google_rating) : undefined,
                 review_count: form.review_count ? parseInt(form.review_count) : undefined,
                 social_facebook: form.social_facebook.trim() || undefined,
@@ -187,8 +187,8 @@ export default function NewProspectPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Weakness Score (1-5)</Label>
-                            <Select value={String(form.weakness_score)} onValueChange={(v) => updateField("weakness_score", parseInt(v))}>
+                            <Label>Rating Score (1-5)</Label>
+                            <Select value={String(form.rating_score)} onValueChange={(v) => updateField("rating_score", parseInt(v))}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     {[1, 2, 3, 4, 5].map((i) => (
@@ -203,11 +203,11 @@ export default function NewProspectPage() {
 
                     {/* Notes */}
                     <div className="space-y-2">
-                        <Label>Weakness Notes</Label>
+                        <Label>Rating Notes</Label>
                         <Textarea
-                            value={form.weakness_notes}
-                            onChange={(e) => updateField("weakness_notes", e.target.value)}
-                            placeholder="What branding weaknesses did you identify?"
+                            value={form.rating_notes}
+                            onChange={(e) => updateField("rating_notes", e.target.value)}
+                            placeholder="What branding ratings did you identify?"
                             rows={3}
                         />
                     </div>
