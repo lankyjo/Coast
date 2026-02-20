@@ -308,14 +308,14 @@ export function Sidebar() {
                 </div>
 
                 {/* Nav — scrollable */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden py-3">
-                    <NavItems collapsed={isSidebarCollapsed} />
+                <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 scrollbar-thin">
+                    {NavItems({ collapsed: isSidebarCollapsed })}
                     <Separator className="my-3 mx-2 w-auto" />
-                    <WorkspaceItems collapsed={isSidebarCollapsed} />
+                    {WorkspaceItems({ collapsed: isSidebarCollapsed })}
                 </div>
 
                 {/* User section — pinned to bottom */}
-                <UserSection collapsed={isSidebarCollapsed} />
+                {UserSection({ collapsed: isSidebarCollapsed })}
             </div>
 
             {/* Mobile Sidebar (Sheet) */}
@@ -328,12 +328,12 @@ export function Sidebar() {
                                 <span className="text-xl font-bold tracking-tight text-primary">Coast</span>
                             </Link>
                         </div>
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden py-3">
-                            <NavItems collapsed={false} />
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 scrollbar-thin">
+                            {NavItems({ collapsed: false })}
                             <Separator className="my-3 mx-2 w-auto" />
-                            <WorkspaceItems collapsed={false} />
+                            {WorkspaceItems({ collapsed: false })}
                         </div>
-                        <UserSection collapsed={false} />
+                        {UserSection({ collapsed: false })}
                     </div>
                 </SheetContent>
             </Sheet>
