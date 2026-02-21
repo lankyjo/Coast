@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/utils/cn";
@@ -21,6 +22,8 @@ import {
     Zap,
     Send,
     Upload,
+    ChevronDown,
+    ChevronRight,
 } from "lucide-react";
 import {
     Avatar,
@@ -76,6 +79,8 @@ export function Sidebar() {
     const { user } = useAuthStore();
     const { unreadCount } = useNotificationStore();
     const { isSidebarCollapsed, toggleSidebar, isMobileSheetOpen, setMobileSheetOpen } = useUIStore();
+    const [isProjectsOpen, setIsProjectsOpen] = useState(true);
+    const [isCrmOpen, setIsCrmOpen] = useState(false);
 
     const handleLogout = async () => {
         await authClient.signOut({
@@ -89,50 +94,61 @@ export function Sidebar() {
 
     // Shared nav content — adapts to collapsed state
     const NavItems = ({ collapsed }: { collapsed: boolean }) => (
-        <nav className="grid gap-1 px-2 text-sm font-medium">
-            {NAV_ITEMS.map((item, index) => {
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                const linkContent = (
-                    <Link
-                        key={index}
-                        href={item.href}
-                        onClick={() => setMobileSheetOpen(false)}
-                        className={cn(
-                            "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all hover:text-primary",
-                            isActive
-                                ? "bg-muted text-primary"
-                                : "text-muted-foreground hover:bg-muted",
-                            collapsed && "justify-center px-2"
-                        )}
-                    >
-                        <item.icon className="h-4 w-4 shrink-0" />
-                        {!collapsed && <span>{item.label}</span>}
-                        {!collapsed && item.showBadge && unreadCount > 0 && (
-                            <Badge variant="destructive" className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px]">
-                                {unreadCount}
-                            </Badge>
-                        )}
-                        {collapsed && item.showBadge && unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] text-destructive-foreground">
-                                {unreadCount}
-                            </span>
-                        )}
-                    </Link>
-                );
-
-                if (collapsed) {
-                    return (
-                        <Tooltip key={index}>
-                            <TooltipTrigger asChild>
-                                <div className="relative">{linkContent}</div>
-                            </TooltipTrigger>
-                            <TooltipContent side="right">{item.label}</TooltipContent>
-                        </Tooltip>
+        <div className="px-2 text-sm font-medium">
+            {!collapsed && (
+                <button
+                    onClick={() => setIsProjectsOpen(!isProjectsOpen)}
+                    className="flex w-full items-center justify-between mb-2 mt-1 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                >
+                    <span>Projects</span>
+                    {isProjectsOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                </button>
+            )}
+            <nav className={cn("grid gap-1", (!isProjectsOpen && !collapsed) && "hidden")}>
+                {NAV_ITEMS.map((item, index) => {
+                    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    const linkContent = (
+                        <Link
+                            key={index}
+                            href={item.href}
+                            onClick={() => setMobileSheetOpen(false)}
+                            className={cn(
+                                "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all hover:text-primary",
+                                isActive
+                                    ? "bg-muted text-primary"
+                                    : "text-muted-foreground hover:bg-muted",
+                                collapsed && "justify-center px-2"
+                            )}
+                        >
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            {!collapsed && <span>{item.label}</span>}
+                            {!collapsed && item.showBadge && unreadCount > 0 && (
+                                <Badge variant="destructive" className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px]">
+                                    {unreadCount}
+                                </Badge>
+                            )}
+                            {collapsed && item.showBadge && unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] text-destructive-foreground">
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </Link>
                     );
-                }
-                return linkContent;
-            })}
-        </nav>
+
+                    if (collapsed) {
+                        return (
+                            <Tooltip key={index}>
+                                <TooltipTrigger asChild>
+                                    <div className="relative">{linkContent}</div>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">{item.label}</TooltipContent>
+                            </Tooltip>
+                        );
+                    }
+                    return linkContent;
+                })}
+            </nav>
+        </div>
     );
 
     const CRM_NAV_ITEMS = [
@@ -147,50 +163,51 @@ export function Sidebar() {
 
     const WorkspaceItems = ({ collapsed }: { collapsed: boolean }) => (
         <div className="px-2 text-sm font-medium">
-            {!collapsed && (
-                <div className="mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Workspace
-                </div>
-            )}
             {user?.role === "admin" && (
                 <>
                     {!collapsed && (
-                        <div className="mb-1 mt-2 px-3 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                            CRM
-                        </div>
+                        <button
+                            onClick={() => setIsCrmOpen(!isCrmOpen)}
+                            className="flex w-full items-center justify-between mb-2 mt-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                        >
+                            <span>CRM</span>
+                            {isCrmOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        </button>
                     )}
-                    {CRM_NAV_ITEMS.map((item, index) => {
-                        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                        const linkContent = (
-                            <Link
-                                key={`crm-${index}`}
-                                href={item.href}
-                                onClick={() => setMobileSheetOpen(false)}
-                                className={cn(
-                                    "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
-                                    isActive
-                                        ? "bg-muted text-primary"
-                                        : "text-muted-foreground hover:bg-muted",
-                                    collapsed && "justify-center px-2"
-                                )}
-                            >
-                                <item.icon className="h-4 w-4 shrink-0" />
-                                {!collapsed && <span>{item.label}</span>}
-                            </Link>
-                        );
-
-                        if (collapsed) {
-                            return (
-                                <Tooltip key={`crm-${index}`}>
-                                    <TooltipTrigger asChild>
-                                        <div>{linkContent}</div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right">{item.label}</TooltipContent>
-                                </Tooltip>
+                    <nav className={cn("grid gap-1", (!isCrmOpen && !collapsed) && "hidden")}>
+                        {CRM_NAV_ITEMS.map((item, index) => {
+                            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                            const linkContent = (
+                                <Link
+                                    key={`crm-${index}`}
+                                    href={item.href}
+                                    onClick={() => setMobileSheetOpen(false)}
+                                    className={cn(
+                                        "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
+                                        isActive
+                                            ? "bg-muted text-primary"
+                                            : "text-muted-foreground hover:bg-muted",
+                                        collapsed && "justify-center px-2"
+                                    )}
+                                >
+                                    <item.icon className="h-4 w-4 shrink-0" />
+                                    {!collapsed && <span>{item.label}</span>}
+                                </Link>
                             );
-                        }
-                        return linkContent;
-                    })}
+
+                            if (collapsed) {
+                                return (
+                                    <Tooltip key={`crm-${index}`}>
+                                        <TooltipTrigger asChild>
+                                            <div>{linkContent}</div>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right">{item.label}</TooltipContent>
+                                    </Tooltip>
+                                );
+                            }
+                            return linkContent;
+                        })}
+                    </nav>
                     {!collapsed && <Separator className="my-2 mx-1 w-auto" />}
                 </>
             )}
