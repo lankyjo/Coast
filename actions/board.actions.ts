@@ -41,6 +41,58 @@ export async function getRecentBoards(limit: number = 7) {
 }
 
 /**
+ * Get backlog tasks (uncompleted tasks from past days)
+ */
+export async function getBacklogTasksAction() {
+    try {
+        const session = await requireAuth();
+        const tasks = await boardService.getBacklogTasks(
+            session.user.id,
+            (session.user as any).role || "member"
+        );
+        return { success: true, data: tasks };
+    } catch (error: any) {
+        console.error("Failed to fetch backlog tasks:", error);
+        return {
+            success: false,
+            error: error.message || "Failed to fetch backlog tasks",
+        };
+    }
+}
+
+/**
+ * Re-board a backlog task to today's board
+ */
+export async function reboardTaskAction(taskId: string) {
+    try {
+        const session = await requireAuth();
+        const task = await boardService.reboardTaskToToday(
+            taskId,
+            session.user.id
+        );
+        if (!task) return { success: false, error: "Task not found" };
+
+        await logActivity(
+            session.user.id,
+            task.projectId?.toString(),
+            "status_changed",
+            `moved "${task.title}" to today's board`,
+            { taskId }
+        );
+
+        revalidatePath("/overview");
+        return { success: true, data: task };
+    } catch (error: any) {
+        console.error("Failed to re-board task:", error);
+        return {
+            success: false,
+            error: error.message || "Failed to re-board task",
+        };
+    }
+}
+
+
+/**
  * Get tasks for a specific board
  */
 export async function getBoardTasks(boardId: string, boardDate?: string) {

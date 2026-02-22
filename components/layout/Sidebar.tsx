@@ -44,6 +44,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { SidebarBoards } from "./SidebarBoards";
 
 const NAV_ITEMS = [
     {
@@ -329,6 +330,8 @@ export function Sidebar() {
                     {NavItems({ collapsed: isSidebarCollapsed })}
                     <Separator className="my-3 mx-2 w-auto" />
                     {WorkspaceItems({ collapsed: isSidebarCollapsed })}
+                    <Separator className="my-3 mx-2 w-auto" />
+                    <SidebarBoards collapsed={isSidebarCollapsed} />
                 </div>
 
                 {/* User section — pinned to bottom */}
@@ -349,6 +352,8 @@ export function Sidebar() {
                             {NavItems({ collapsed: false })}
                             <Separator className="my-3 mx-2 w-auto" />
                             {WorkspaceItems({ collapsed: false })}
+                            <Separator className="my-3 mx-2 w-auto" />
+                            <SidebarBoards collapsed={false} />
                         </div>
                         {UserSection({ collapsed: false })}
                     </div>

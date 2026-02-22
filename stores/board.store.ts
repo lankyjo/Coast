@@ -10,11 +10,15 @@ import {
     addCommentAction,
     getCommentsForTask,
     deleteBoardTask,
+    getBacklogTasksAction,
+    reboardTaskAction,
 } from "@/actions/board.actions";
 
 interface BoardState {
     boards: DailyBoard[];
     boardTasks: Record<string, ITask[]>; // boardId -> tasks
+    backlogTasks: ITask[];
+    isLoadingBacklog: boolean;
     comments: Comment[];
     isLoading: boolean;
     isLoadingComments: boolean;
@@ -22,7 +26,7 @@ interface BoardState {
     visibilityFilter: "all" | "general" | "private";
 
     // Actions
-    fetchRecentBoards: () => Promise<DailyBoard[]>;
+    fetchRecentBoards: (limit?: number) => Promise<DailyBoard[]>;
     ensureTodayBoard: () => Promise<DailyBoard | null>;
     fetchBoardTasks: (boardId: string, boardDate?: string) => Promise<void>;
     fetchAllBoardTasks: (boards: { id: string; date: string }[]) => Promise<void>;
@@ -47,21 +51,25 @@ interface BoardState {
     ) => Promise<void>;
     deleteBoardTask: (taskId: string, boardId: string) => Promise<void>;
     setVisibilityFilter: (filter: "all" | "general" | "private") => void;
+    fetchBacklogTasks: () => Promise<void>;
+    reboardTask: (taskId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const useBoardStore = create<BoardState>((set, get) => ({
     boards: [],
     boardTasks: {},
+    backlogTasks: [],
+    isLoadingBacklog: false,
     comments: [],
     isLoading: false,
     isLoadingComments: false,
     error: null,
     visibilityFilter: "all",
 
-    fetchRecentBoards: async () => {
+    fetchRecentBoards: async (limit?: number) => {
         set({ isLoading: true, error: null });
         try {
-            const result = await getRecentBoards();
+            const result = await getRecentBoards(limit);
             if (result.success && result.data) {
                 set({ boards: result.data as any });
                 return result.data as unknown as DailyBoard[];
@@ -238,4 +246,61 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     setVisibilityFilter: (filter) => set({ visibilityFilter: filter }),
+
+    fetchBacklogTasks: async () => {
+        set({ isLoadingBacklog: true });
+        try {
+            const result = await getBacklogTasksAction();
+            if (result.success && result.data) {
+                set({ backlogTasks: result.data as ITask[] });
+            }
+        } catch {
+            set({ error: "Failed to fetch backlog tasks" });
+        } finally {
+            set({ isLoadingBacklog: false });
+        }
+    },
+
+    reboardTask: async (taskId: string) => {
+        try {
+            const result = await reboardTaskAction(taskId);
+            if (result.success && result.data) {
+                const task = result.data as ITask;
+                // Remove from backlog
+                set((state) => ({
+                    backlogTasks: state.backlogTasks.filter(
+                        (t) => t._id.toString() !== taskId
+                    ),
+                }));
+                // Add to today's board tasks
+                const todayBoard = get().boards.find((b) => {
+                    const d = new Date(b.date);
+                    const today = new Date();
+                    return (
+                        d.getFullYear() === today.getFullYear() &&
+                        d.getMonth() === today.getMonth() &&
+                        d.getDate() === today.getDate()
+                    );
+                });
+                if (todayBoard) {
+                    set((state) => ({
+                        boardTasks: {
+                            ...state.boardTasks,
+                            [todayBoard._id]: [
+                                ...(state.boardTasks[todayBoard._id] || []),
+                                task,
+                            ],
+                        },
+                    }));
+                }
+                return { success: true };
+            }
+            return {
+                success: false,
+                error: result.error || "Failed to re-board task",
+            };
+        } catch {
+            return { success: false, error: "An unexpected error occurred" };
+        }
+    },
 }));

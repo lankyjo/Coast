@@ -151,3 +151,77 @@ export async function getTasksForBoard(
 
     return JSON.parse(JSON.stringify(unique));
 }
+
+/**
+ * Get all uncompleted tasks from past daily boards (the virtual backlog).
+ * Excludes tasks linked to today's board.
+ * Filters private tasks based on user role.
+ */
+export async function getBacklogTasks(
+    userId: string,
+    userRole: string
+): Promise<ITask[]> {
+    await connectDB();
+
+    const todayStart = getTodayStartWAT();
+
+    // Find all board IDs for days before today
+    const pastBoards = await DailyBoard.find({
+        date: { $lt: todayStart },
+    })
+        .select("_id")
+        .lean();
+
+    const pastBoardIds = pastBoards.map((b) => b._id);
+
+    if (pastBoardIds.length === 0) return [];
+
+    const query: any = {
+        dailyBoardId: { $in: pastBoardIds },
+        status: { $ne: "done" },
+    };
+
+    // Filter private tasks for non-admin users
+    if (userRole !== "admin") {
+        query.$and = [
+            { dailyBoardId: { $in: pastBoardIds }, status: { $ne: "done" } },
+            {
+                $or: [
+                    { visibility: "general" },
+                    { visibility: { $exists: false } },
+                    { visibility: "private", assigneeIds: { $in: [userId] } },
+                ],
+            },
+        ];
+        delete query.dailyBoardId;
+        delete query.status;
+    }
+
+    const tasks = await Task.find(query)
+        .sort({ priority: -1, deadline: 1, createdAt: -1 })
+        .lean();
+
+    return JSON.parse(JSON.stringify(tasks));
+}
+
+/**
+ * Move a task from its current board to today's board ("re-board").
+ * Creates today's board if it doesn't exist.
+ */
+export async function reboardTaskToToday(
+    taskId: string,
+    userId: string
+): Promise<ITask | null> {
+    await connectDB();
+
+    const todayBoard = await getOrCreateTodayBoard(userId);
+
+    const task = await Task.findByIdAndUpdate(
+        taskId,
+        { $set: { dailyBoardId: todayBoard._id } },
+        { returnDocument: "after" }
+    ).lean();
+
+    if (!task) return null;
+    return JSON.parse(JSON.stringify(task));
+}
