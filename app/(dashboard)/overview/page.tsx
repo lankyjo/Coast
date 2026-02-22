@@ -31,6 +31,7 @@ import {
     RotateCw,
     CalendarDays,
     Inbox,
+    Briefcase,
 } from "lucide-react";
 import { pusherClient } from "@/lib/pusher-client";
 import Link from "next/link";
@@ -63,12 +64,14 @@ export default function OverviewPage() {
         isLoading,
         isLoadingBacklog,
         visibilityFilter,
+        projectFilter,
         fetchRecentBoards,
         ensureTodayBoard,
         fetchBoardTasks,
         fetchAllBoardTasks,
         fetchBacklogTasks,
         setVisibilityFilter,
+        setProjectFilter,
     } = useBoardStore();
 
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -184,12 +187,28 @@ export default function OverviewPage() {
 
     const getFilteredTasks = useCallback(
         (tasks: ITask[]): ITask[] => {
-            if (visibilityFilter === "all") return tasks;
-            return tasks.filter(
-                (t: any) => t.visibility === visibilityFilter
-            );
+            let filtered = tasks;
+
+            // Visibility filter
+            if (visibilityFilter !== "all") {
+                filtered = filtered.filter(
+                    (t: any) => t.visibility === visibilityFilter
+                );
+            }
+
+            // Project filter
+            if (projectFilter !== "all") {
+                filtered = filtered.filter(
+                    (t: any) => {
+                        const pid = typeof t.projectId === 'string' ? t.projectId : t.projectId?._id?.toString() || t.projectId?.toString();
+                        return pid === projectFilter;
+                    }
+                );
+            }
+
+            return filtered;
         },
-        [visibilityFilter]
+        [visibilityFilter, projectFilter]
     );
 
     const filteredBacklogTasks = useMemo(
@@ -283,6 +302,34 @@ export default function OverviewPage() {
                                 History
                             </Button>
                         </Link>
+
+                        <Select
+                            value={projectFilter}
+                            onValueChange={(v) => setProjectFilter(v)}
+                        >
+                            <SelectTrigger className="h-8 w-[160px] text-xs">
+                                <SelectValue placeholder="All Projects" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">
+                                    <span className="flex items-center gap-1.5">
+                                        <Briefcase className="h-3 w-3" />
+                                        All Projects
+                                    </span>
+                                </SelectItem>
+                                {projects.map((p) => (
+                                    <SelectItem key={(p._id as any).toString()} value={(p._id as any).toString()}>
+                                        <div className="flex items-center gap-2">
+                                            <div
+                                                className="w-2 h-2 rounded-full"
+                                                style={{ backgroundColor: (p as any).color || '#3b82f6' }}
+                                            />
+                                            <span className="truncate">{p.name}</span>
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
                         <Select
                             value={visibilityFilter}

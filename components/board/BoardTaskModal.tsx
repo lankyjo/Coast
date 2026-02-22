@@ -7,6 +7,7 @@ import { useUserStore } from "@/stores/user.store";
 import { useProjectStore } from "@/stores/project.store";
 import { useBoardStore } from "@/stores/board.store";
 import { useTaskStore } from "@/stores/task.store";
+import { useCustomBoardStore } from "@/stores/custom-board.store";
 import { Comment } from "@/types/board.types";
 import {
     Dialog,
@@ -58,6 +59,7 @@ import {
     X,
     Trash2,
     Calendar as CalendarIcon,
+    Layout,
 } from "lucide-react";
 import { DatePickerWithPresets } from "@/components/ui/date-picker-with-presets";
 import { TASK_STATUS_LABELS, TASK_STATUS_ORDER, TaskStatus } from "@/constants/task-status";
@@ -65,6 +67,7 @@ import { PRIORITY_LABELS, PRIORITY_ORDER, Priority } from "@/constants/priority"
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/user-utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface BoardTaskModalProps {
     taskId: string | null;
@@ -93,9 +96,23 @@ export function BoardTaskModal({ taskId, boardId, open, onOpenChange }: BoardTas
     const { projects } = useProjectStore();
     const { updateTask } = useTaskStore();
     const { toggleTaskDone, fetchComments, addComment, comments, isLoadingComments, fetchBoardTasks, boardTasks, deleteBoardTask } = useBoardStore();
+    const { boards: customBoards, addTask: addTaskToCustomBoard } = useCustomBoardStore();
 
     // Derive task from store for reactivity
-    const task = taskId && boardTasks[boardId] ? boardTasks[boardId].find((t) => t._id.toString() === taskId) : null;
+    const derivetask = taskId && boardTasks[boardId] ? boardTasks[boardId].find((t) => t._id.toString() === taskId) : null;
+
+    // Fallback search in all boardTasks if not found in current boardId (e.g. from custom board page)
+    const task = derivetask || Object.values(boardTasks).flat().find(t => t._id.toString() === taskId);
+
+    const handleAddToCustomBoard = async (customBoardId: string) => {
+        if (!taskId) return;
+        const result = await addTaskToCustomBoard(customBoardId, taskId);
+        if (result.success) {
+            toast.success("Added to board");
+        } else {
+            toast.error(result.error || "Failed to add to board");
+        }
+    };
 
     const [commentText, setCommentText] = useState("");
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -584,6 +601,32 @@ export function BoardTaskModal({ taskId, boardId, open, onOpenChange }: BoardTas
                                     <span className="text-xs text-muted-foreground">No project</span>
                                 )}
                             </div>
+
+                            {/* Add to Custom Board */}
+                            {customBoards.length > 0 && (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                        <Layout className="h-3 w-3" />
+                                        Custom Boards
+                                    </label>
+                                    <Select
+                                        onValueChange={handleAddToCustomBoard}
+                                    >
+                                        <SelectTrigger className="h-8 w-[200px] text-xs">
+                                            <SelectValue placeholder="Add to board..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {customBoards.map((b) => (
+                                                <SelectItem key={(b._id as any).toString()} value={(b._id as any).toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="truncate">{b.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
 
                             {/* Visibility */}
                             {(task as any).visibility === "private" && (

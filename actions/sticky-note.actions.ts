@@ -2,7 +2,10 @@
 
 import { requireAuth } from "./auth.actions";
 import * as stickyNoteService from "@/services/sticky-note.service";
+import * as notificationService from "@/services/notification.service";
 import { revalidatePath } from "next/cache";
+import { connectDB } from "@/lib/db";
+import mongoose from "mongoose";
 
 export async function createStickyNoteAction(data: {
     title: string;
@@ -17,6 +20,29 @@ export async function createStickyNoteAction(data: {
             ...data,
             createdBy: session.user.id,
         });
+
+        // If team visibility, notify everyone else
+        if (data.visibility === "team") {
+            await connectDB();
+            const users = await mongoose.connection.collection("user").find(
+                { _id: { $ne: new mongoose.Types.ObjectId(session.user.id) } },
+                { projection: { _id: 1 } }
+            ).toArray();
+
+            const notificationPromises = users.map(u =>
+                notificationService.createNotification({
+                    userId: u._id.toString(),
+                    type: "sticky_note_shared",
+                    title: "New Team Note",
+                    message: `${session.user.name} shared a new note: ${data.title}`,
+                    metadata: {
+                        triggeredBy: session.user.id
+                    }
+                })
+            );
+            await Promise.all(notificationPromises);
+        }
+
         revalidatePath("/overview");
         return { success: true, data: note };
     } catch (error: any) {

@@ -4,6 +4,7 @@ export type NotificationType =
     | "deadline_warning"
     | "eod_report"
     | "member_joined"
+    | "sticky_note_shared"
     | "info";
 
 export interface NotificationMetadata {

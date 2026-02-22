@@ -24,6 +24,7 @@ interface BoardState {
     isLoadingComments: boolean;
     error: string | null;
     visibilityFilter: "all" | "general" | "private";
+    projectFilter: string | "all";
 
     // Actions
     fetchRecentBoards: (limit?: number) => Promise<DailyBoard[]>;
@@ -51,6 +52,7 @@ interface BoardState {
     ) => Promise<void>;
     deleteBoardTask: (taskId: string, boardId: string) => Promise<void>;
     setVisibilityFilter: (filter: "all" | "general" | "private") => void;
+    setProjectFilter: (projectId: string | "all") => void;
     fetchBacklogTasks: () => Promise<void>;
     reboardTask: (taskId: string) => Promise<{ success: boolean; error?: string }>;
 }
@@ -65,6 +67,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     isLoadingComments: false,
     error: null,
     visibilityFilter: "all",
+    projectFilter: "all",
 
     fetchRecentBoards: async (limit?: number) => {
         set({ isLoading: true, error: null });
@@ -246,6 +249,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     setVisibilityFilter: (filter) => set({ visibilityFilter: filter }),
+    setProjectFilter: (projectId) => set({ projectFilter: projectId }),
 
     fetchBacklogTasks: async () => {
         set({ isLoadingBacklog: true });

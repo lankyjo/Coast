@@ -19,7 +19,7 @@ interface CustomBoardState {
     createBoard: (data: any) => Promise<{ success: boolean; error?: string }>;
     updateBoard: (id: string, data: any) => Promise<void>;
     deleteBoard: (id: string) => Promise<void>;
-    addTask: (boardId: string, taskId: string) => Promise<void>;
+    addTask: (boardId: string, taskId: string) => Promise<{ success: boolean; error?: string }>;
     removeTask: (boardId: string, taskId: string) => Promise<void>;
 }
 
@@ -102,9 +102,11 @@ export const useCustomBoardStore = create<CustomBoardState>((set, get) => ({
                         (b._id as any).toString() === boardId ? (result.data as ICustomBoard) : b
                     ),
                 }));
+                return { success: true };
             }
+            return { success: false, error: result.error };
         } catch {
-            set({ error: "Failed to add task to board" });
+            return { success: false, error: "Failed to add task to board" };
         }
     },
 

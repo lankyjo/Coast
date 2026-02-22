@@ -35,6 +35,7 @@ const NotificationSchema = new Schema<INotification>(
                 "deadline_warning",
                 "eod_report",
                 "member_joined",
+                "sticky_note_shared",
                 "info",
             ],
             required: true,
