@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     if (isLoading) {
         return (
-            <div className="flex min-h-screen w-full flex-col bg-muted/40 md:flex-row">
+            <div className="flex min-h-dvh w-full flex-col bg-muted/40 md:flex-row">
                 {/* Sidebar skeleton */}
                 <div className="hidden md:flex md:flex-col h-screen w-64 border-r bg-muted/40 sticky top-0 shrink-0">
                     <div className="flex h-14 items-center border-b px-4">
@@ -90,7 +90,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-muted/40 md:flex-row overflow-hidden">
+        <div className="flex h-dvh w-full flex-col bg-muted/40 md:flex-row overflow-hidden">
             <Sidebar />
             <div className="flex flex-col flex-1 min-h-screen min-w-0">
                 <Header />
