@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import { suggestAssignee, breakDownTask, suggestDeadline } from "@/actions/ai.actions";
 import { AISuggestion, AITaskBreakdown, AIDeadlineSuggestion } from "@/types/ai.types";
 import { AITaskDialog } from "@/components/tasks/AITaskDialog";
+import { createTaskSchema } from "@/utils/validation";
 
 interface CreateTaskFormProps {
     projectId?: string; // If provided, project select is hidden
@@ -62,6 +63,7 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
     const [startDate, setStartDate] = useState<Date | undefined>(undefined);
     const [deadline, setDeadline] = useState<Date | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     // AI State
     const [isAIDraftOpen, setIsAIDraftOpen] = useState(false);
@@ -77,22 +79,36 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
     });
 
     const handleSubmit = async () => {
-        if (!title.trim()) return toast.error("Title is required");
-        if (!projectId) return toast.error("Project is required");
+        const taskDataRaw = {
+            title: title.trim(),
+            description: description.trim(),
+            projectId,
+            assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
+            priority,
+            visibility,
+            startDate: startDate ? startDate.toISOString() : undefined,
+            deadline: deadline ? deadline.toISOString() : undefined,
+        };
 
+        const validation = createTaskSchema.safeParse(taskDataRaw);
+
+        if (!validation.success) {
+            const fieldErrors: Record<string, string> = {};
+            validation.error.issues.forEach((err: any) => {
+                if (err.path[0]) {
+                    fieldErrors[err.path[0].toString()] = err.message;
+                }
+            });
+            setErrors(fieldErrors);
+            toast.error("Please fill in all required fields correctly");
+            return;
+        }
+
+        setErrors({});
         setIsSubmitting(true);
 
         try {
-            const taskData = {
-                title: title.trim(),
-                description: description.trim(),
-                projectId,
-                assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
-                priority,
-                visibility,
-                startDate: startDate ? startDate.toISOString() : undefined,
-                deadline: deadline ? deadline.toISOString() : undefined,
-            };
+            const taskData = validation.data as any;
 
             let result;
             if (boardId) {
@@ -147,22 +163,32 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
 
             {/* Title */}
             <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Title</Label>
+                <Label className="text-xs font-semibold">Title <span className="text-red-500">*</span></Label>
                 <Input
                     placeholder="Enter task title..."
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="h-9"
+                    onChange={(e) => {
+                        setTitle(e.target.value);
+                        if (errors.title) setErrors(prev => ({ ...prev, title: "" }));
+                    }}
+                    className={cn("h-9", errors.title && "border-red-500 focus-visible:ring-red-500")}
                     autoFocus
                 />
+                {errors.title && <p className="text-[10px] text-red-500">{errors.title}</p>}
             </div>
 
             {/* Project (if not pre-selected) */}
             {!defaultProjectId && (
                 <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Project</Label>
-                    <Select value={projectId} onValueChange={setProjectId}>
-                        <SelectTrigger className="h-9">
+                    <Label className="text-xs font-semibold">Project <span className="text-red-500">*</span></Label>
+                    <Select
+                        value={projectId}
+                        onValueChange={(v) => {
+                            setProjectId(v);
+                            if (errors.projectId) setErrors(prev => ({ ...prev, projectId: "" }));
+                        }}
+                    >
+                        <SelectTrigger className={cn("h-9", errors.projectId && "border-red-500 focus:ring-red-500")}>
                             <SelectValue placeholder="Select a project" />
                         </SelectTrigger>
                         <SelectContent>
@@ -173,13 +199,14 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
                             ))}
                         </SelectContent>
                     </Select>
+                    {errors.projectId && <p className="text-[10px] text-red-500">{errors.projectId}</p>}
                 </div>
             )}
 
             {/* Description + AI Breakdown */}
             <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold">Description</Label>
+                    <Label className="text-xs font-semibold">Description <span className="text-red-500">*</span></Label>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -201,10 +228,14 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
                 <Textarea
                     placeholder="Enter task description..."
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={(e) => {
+                        setDescription(e.target.value);
+                        if (errors.description) setErrors(prev => ({ ...prev, description: "" }));
+                    }}
                     rows={3}
-                    className="resize-none text-sm"
+                    className={cn("resize-none text-sm", errors.description && "border-red-500 focus-visible:ring-red-500")}
                 />
+                {errors.description && <p className="text-[10px] text-red-500">{errors.description}</p>}
             </div>
 
             {/* AI Breakdown Suggestion */}
@@ -299,7 +330,7 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
                 </div>
                 <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                        <Label className="text-xs font-semibold">Due Date</Label>
+                        <Label className="text-xs font-semibold">Due Date <span className="text-red-500">*</span></Label>
                         <Button
                             variant="ghost"
                             size="sm"
@@ -352,10 +383,16 @@ export function CreateTaskForm({ projectId: defaultProjectId, boardId, onSuccess
                         </div>
                     )}
 
-                    <DatePickerWithPresets
-                        date={deadline}
-                        setDate={setDeadline}
-                    />
+                    <div className={cn(errors.deadline && "rounded-md border border-red-500")}>
+                        <DatePickerWithPresets
+                            date={deadline}
+                            setDate={(d) => {
+                                setDeadline(d);
+                                if (errors.deadline) setErrors(prev => ({ ...prev, deadline: "" }));
+                            }}
+                        />
+                    </div>
+                    {errors.deadline && <p className="text-[10px] text-red-500">{errors.deadline}</p>}
                 </div>
             </div>
 

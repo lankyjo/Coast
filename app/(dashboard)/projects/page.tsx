@@ -24,11 +24,15 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, FolderKanban } from "lucide-react";
+import { Plus, Search, FolderKanban, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { IProject } from "@/models/project.model";
 import { SmartProjectDialog } from "@/components/projects/SmartProjectDialog";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createProjectSchema, CreateProjectInput } from "@/utils/validation";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 export default function ProjectsPage() {
     const { projects, fetchProjects, createProject, isLoading } = useProjectStore();
@@ -45,13 +49,15 @@ export default function ProjectsPage() {
         }
     }, [searchParams, router]);
 
-    // Create form state
-    const [newProject, setNewProject] = useState({
-        name: "",
-        description: "",
-        startDate: new Date().toISOString().split("T")[0],
-        deadline: "",
-        tags: "",
+    const form = useForm<CreateProjectInput>({
+        resolver: zodResolver(createProjectSchema),
+        defaultValues: {
+            name: "",
+            description: "",
+            startDate: new Date().toISOString().split("T")[0],
+            deadline: "",
+            tags: [],
+        },
     });
 
     useEffect(() => {
@@ -67,23 +73,21 @@ export default function ProjectsPage() {
             p.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleCreate = async () => {
-        if (!newProject.name || !newProject.deadline) return;
-
+    const handleCreate = async (data: CreateProjectInput) => {
         await createProject({
-            name: newProject.name,
-            description: newProject.description,
-            startDate: newProject.startDate,
-            deadline: newProject.deadline,
-            tags: newProject.tags.split(",").map((t) => t.trim()).filter(Boolean),
+            name: data.name,
+            description: data.description,
+            startDate: data.startDate,
+            deadline: data.deadline,
+            tags: data.tags || [],
         });
 
-        setNewProject({
+        form.reset({
             name: "",
             description: "",
             startDate: new Date().toISOString().split("T")[0],
             deadline: "",
-            tags: "",
+            tags: [],
         });
         setIsCreateOpen(false);
     };
@@ -125,82 +129,94 @@ export default function ProjectsPage() {
                                     Add a new project to your workspace.
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">Project Name</Label>
-                                    <Input
-                                        id="name"
-                                        placeholder="My Awesome Project"
-                                        value={newProject.name}
-                                        onChange={(e) =>
-                                            setNewProject((prev) => ({ ...prev, name: e.target.value }))
-                                        }
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(handleCreate)} className="grid gap-4 py-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Project Name <span className="text-red-500">*</span></FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="My Awesome Project" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
                                     />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="description">Description</Label>
-                                    <Input
-                                        id="description"
-                                        placeholder="Brief project description..."
-                                        value={newProject.description}
-                                        onChange={(e) =>
-                                            setNewProject((prev) => ({
-                                                ...prev,
-                                                description: e.target.value,
-                                            }))
-                                        }
+                                    <FormField
+                                        control={form.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Description <span className="text-red-500">*</span></FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Brief project description..." {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
                                     />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="startDate">Start Date</Label>
-                                        <Input
-                                            id="startDate"
-                                            type="date"
-                                            value={newProject.startDate}
-                                            onChange={(e) =>
-                                                setNewProject((prev) => ({
-                                                    ...prev,
-                                                    startDate: e.target.value,
-                                                }))
-                                            }
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="startDate"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Start Date <span className="text-red-500">*</span></FormLabel>
+                                                    <FormControl>
+                                                        <Input type="date" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="deadline"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Deadline <span className="text-red-500">*</span></FormLabel>
+                                                    <FormControl>
+                                                        <Input type="date" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
                                         />
                                     </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="deadline">Deadline</Label>
-                                        <Input
-                                            id="deadline"
-                                            type="date"
-                                            value={newProject.deadline}
-                                            onChange={(e) =>
-                                                setNewProject((prev) => ({
-                                                    ...prev,
-                                                    deadline: e.target.value,
-                                                }))
-                                            }
-                                        />
-                                    </div>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="tags">Tags (comma-separated)</Label>
-                                    <Input
-                                        id="tags"
-                                        placeholder="design, frontend, urgent"
-                                        value={newProject.tags}
-                                        onChange={(e) =>
-                                            setNewProject((prev) => ({ ...prev, tags: e.target.value }))
-                                        }
+                                    <FormField
+                                        control={form.control}
+                                        name="tags"
+                                        render={({ field: { value, onChange, ...fieldProps } }) => (
+                                            <FormItem>
+                                                <FormLabel>Tags (comma-separated)</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        placeholder="design, frontend, urgent"
+                                                        value={value?.join(", ") || ""}
+                                                        onChange={(e) => {
+                                                            const arr = e.target.value.split(",").map(t => t.trim()).filter(Boolean);
+                                                            onChange(arr);
+                                                        }}
+                                                        {...fieldProps}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
                                     />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                                    Cancel
-                                </Button>
-                                <Button onClick={handleCreate} disabled={!newProject.name || !newProject.deadline}>
-                                    Create Project
-                                </Button>
-                            </DialogFooter>
+                                    <DialogFooter className="mt-4">
+                                        <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" disabled={form.formState.isSubmitting}>
+                                            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Create Project
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </Form>
                         </DialogContent>
                     </Dialog>
 

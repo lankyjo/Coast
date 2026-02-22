@@ -15,13 +15,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { createProspectSchema } from "@/utils/validation";
+import { cn } from "@/lib/utils";
 
 export default function NewProspectPage() {
     const router = useRouter();
     const [isSaving, setIsSaving] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const [form, setForm] = useState({
         business_name: "",
         owner_name: "",
@@ -46,37 +49,50 @@ export default function NewProspectPage() {
 
     function updateField(field: string, value: string | number) {
         setForm((prev) => ({ ...prev, [field]: value }));
+        if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
     }
 
     async function handleSave() {
-        if (!form.business_name.trim()) {
-            toast.error("Business name is required");
+        const prospectData = {
+            business_name: form.business_name.trim(),
+            owner_name: form.owner_name.trim() || undefined,
+            email: form.email.trim() || undefined,
+            phone: form.phone.trim() || undefined,
+            website: form.website.trim() || undefined,
+            address: form.address.trim() || undefined,
+            market: form.market as any,
+            category: form.category as any,
+            rating_score: form.rating_score,
+            rating_notes: form.rating_notes.trim() || undefined,
+            google_rating: form.google_rating ? parseFloat(form.google_rating) : undefined,
+            review_count: form.review_count ? parseInt(form.review_count) : undefined,
+            social_facebook: form.social_facebook.trim() || undefined,
+            social_instagram: form.social_instagram.trim() || undefined,
+            social_linkedin: form.social_linkedin.trim() || undefined,
+            est_revenue: form.est_revenue.trim() || undefined,
+            est_employees: form.est_employees.trim() || undefined,
+            notes: form.notes.trim() || undefined,
+            tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        };
+
+        const validation = createProspectSchema.safeParse(prospectData);
+
+        if (!validation.success) {
+            const fieldErrors: Record<string, string> = {};
+            validation.error.issues.forEach((err: any) => {
+                if (err.path[0]) {
+                    fieldErrors[err.path[0].toString()] = err.message;
+                }
+            });
+            setErrors(fieldErrors);
+            toast.error("Please fill in all required fields correctly");
             return;
         }
 
+        setErrors({});
         setIsSaving(true);
         try {
-            const result = await createProspect({
-                business_name: form.business_name.trim(),
-                owner_name: form.owner_name.trim() || undefined,
-                email: form.email.trim() || undefined,
-                phone: form.phone.trim() || undefined,
-                website: form.website.trim() || undefined,
-                address: form.address.trim() || undefined,
-                market: form.market as any,
-                category: form.category as any,
-                rating_score: form.rating_score,
-                rating_notes: form.rating_notes.trim() || undefined,
-                google_rating: form.google_rating ? parseFloat(form.google_rating) : undefined,
-                review_count: form.review_count ? parseInt(form.review_count) : undefined,
-                social_facebook: form.social_facebook.trim() || undefined,
-                social_instagram: form.social_instagram.trim() || undefined,
-                social_linkedin: form.social_linkedin.trim() || undefined,
-                est_revenue: form.est_revenue.trim() || undefined,
-                est_employees: form.est_employees.trim() || undefined,
-                notes: form.notes.trim() || undefined,
-                tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-            } as any);
+            const result = await createProspect(validation.data as any);
 
             if (result.success) {
                 toast.success("Prospect created");
@@ -99,7 +115,7 @@ export default function NewProspectPage() {
                     Back to Prospects
                 </Link>
                 <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-                    <Save className="h-4 w-4" />
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     {isSaving ? "Saving..." : "Save Prospect"}
                 </Button>
             </div>
@@ -112,12 +128,14 @@ export default function NewProspectPage() {
                     {/* Basic Info */}
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                            <Label>Business Name *</Label>
+                            <Label>Business Name <span className="text-red-500">*</span></Label>
                             <Input
                                 value={form.business_name}
                                 onChange={(e) => updateField("business_name", e.target.value)}
                                 placeholder="Company name"
+                                className={cn(errors.business_name && "border-red-500 focus-visible:ring-red-500")}
                             />
+                            {errors.business_name && <p className="text-xs text-red-500">{errors.business_name}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label>Owner / Contact Name</Label>
@@ -134,7 +152,9 @@ export default function NewProspectPage() {
                                 value={form.email}
                                 onChange={(e) => updateField("email", e.target.value)}
                                 placeholder="contact@company.com"
+                                className={cn(errors.email && "border-red-500 focus-visible:ring-red-500")}
                             />
+                            {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label>Phone</Label>

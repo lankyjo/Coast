@@ -51,8 +51,8 @@ export const createTaskSchema = z.object({
     ),
     deadline: z
         .string()
-        .optional()
-        .refine((val) => !val || !isNaN(Date.parse(val)), {
+        .min(1, "Due date is required")
+        .refine((val) => !isNaN(Date.parse(val)), {
             message: "Invalid date format",
         }),
     startDate: z
@@ -95,6 +95,34 @@ export const updateTaskSchema = z.object({
     visibility: z.enum(["general", "private"]).optional(),
 });
 
+// Prospects
+export const createProspectSchema = z.object({
+    business_name: z.string().min(2, "Business name must be at least 2 characters"),
+    owner_name: z.string().optional(),
+    email: z
+        .string()
+        .optional()
+        .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+            message: "Invalid email address",
+        }),
+    phone: z.string().optional(),
+    website: z.string().optional(),
+    address: z.string().optional(),
+    market: z.enum(["DFW", "North Alabama", "Other"]),
+    category: z.enum(["Roofing", "Builders", "Landscaping", "Pools", "Real Estate", "Property Mgmt", "Auto Detail", "Cleaning", "Custom"]),
+    rating_score: z.number().min(1).max(5),
+    rating_notes: z.string().optional(),
+    google_rating: z.number().min(0).max(5).optional(),
+    review_count: z.number().int().min(0).optional(),
+    social_facebook: z.string().optional(),
+    social_instagram: z.string().optional(),
+    social_linkedin: z.string().optional(),
+    est_revenue: z.string().optional(),
+    est_employees: z.string().optional(),
+    notes: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+});
+
 // Type exports
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
@@ -103,3 +131,4 @@ export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
+export type CreateProspectInput = z.infer<typeof createProspectSchema>;
