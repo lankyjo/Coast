@@ -22,7 +22,7 @@ interface BoardState {
     visibilityFilter: "all" | "general" | "private";
 
     // Actions
-    fetchRecentBoards: () => Promise<void>;
+    fetchRecentBoards: () => Promise<DailyBoard[]>;
     ensureTodayBoard: () => Promise<DailyBoard | null>;
     fetchBoardTasks: (boardId: string, boardDate?: string) => Promise<void>;
     fetchAllBoardTasks: (boards: { id: string; date: string }[]) => Promise<void>;
@@ -64,11 +64,14 @@ export const useBoardStore = create<BoardState>((set, get) => ({
             const result = await getRecentBoards();
             if (result.success && result.data) {
                 set({ boards: result.data as any });
+                return result.data as unknown as DailyBoard[];
             } else {
                 set({ error: result.error || "Failed to fetch boards" });
+                return [];
             }
         } catch {
             set({ error: "An unexpected error occurred" });
+            return [];
         } finally {
             set({ isLoading: false });
         }

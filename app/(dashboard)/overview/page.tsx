@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { ITask } from "@/models/task.model";
 import { useAuthStore } from "@/stores/auth.store";
 import { useProjectStore } from "@/stores/project.store";
@@ -64,47 +64,66 @@ export default function OverviewPage() {
     const [isInitializing, setIsInitializing] = useState(true);
 
     useEffect(() => {
+        let mounted = true;
+
         const init = async () => {
             try {
-                await Promise.all([
-                    fetchUsers(),
-                    fetchProjects(),
-                    ensureTodayBoard()
-                ]);
-                await fetchRecentBoards();
+                // Fire everything that can start immediately
+                fetchUsers();
+                fetchProjects();
 
-                const currentBoards = useBoardStore.getState().boards;
-                const currentTasks = useBoardStore.getState().boardTasks;
+                // Today's board is needed first to show today's column
+                await ensureTodayBoard();
 
-                const boardsToFetch = currentBoards
-                    .filter(b => !currentTasks[b._id])
-                    .map(b => ({ id: b._id, date: b.date }));
+                // Fetch boards and immediately start fetching their tasks in parallel
+                const fetchedBoards = await fetchRecentBoards();
 
-                if (boardsToFetch.length > 0) {
-                    await fetchAllBoardTasks(boardsToFetch);
+                if (mounted && fetchedBoards && fetchedBoards.length > 0) {
+                    const currentTasks = useBoardStore.getState().boardTasks;
+                    const boardsToFetch = fetchedBoards
+                        .filter((b: DailyBoard) => !currentTasks[b._id])
+                        .map((b: DailyBoard) => ({ id: b._id, date: b.date }));
+
+                    if (boardsToFetch.length > 0) {
+                        fetchAllBoardTasks(boardsToFetch);
+                    }
                 }
             } finally {
-                setIsInitializing(false);
+                if (mounted) {
+                    setIsInitializing(false);
+                }
             }
         };
         init();
-    }, []);
+
+        return () => {
+            mounted = false;
+        };
+    }, [fetchUsers, fetchProjects, ensureTodayBoard, fetchRecentBoards, fetchAllBoardTasks]);
+
+    const boardIds = boards.map(b => b._id).join(',');
+    const boardsRef = useRef(boards);
+
+    useEffect(() => {
+        boardsRef.current = boards;
+    }, [boards]);
 
     // Real-time updates with Pusher
     useEffect(() => {
-        if (boards.length === 0) return;
+        if (!boardIds) return;
 
         const subscribedChannels: string[] = [];
+        const currentBoards = boardsRef.current;
 
-        boards.forEach((board) => {
+        currentBoards.forEach((board) => {
             const channelName = `board-${board._id}`;
             const channel = pusherClient.subscribe(channelName);
             subscribedChannels.push(channelName);
 
-            channel.bind("task-updated", (data: any) => {
+            channel.bind("task-updated", (data: { boardId: string;[key: string]: any }) => {
                 // Re-fetch tasks for the updated board
                 if (data.boardId) {
-                    const matchedBoard = boards.find(b => b._id === data.boardId);
+                    const matchedBoard = boardsRef.current.find(b => b._id === data.boardId);
                     fetchBoardTasks(data.boardId, matchedBoard?.date);
                 }
             });
@@ -115,23 +134,23 @@ export default function OverviewPage() {
                 pusherClient.unsubscribe(channelName);
             });
         };
-    }, [boards, fetchBoardTasks]);
+    }, [boardIds, fetchBoardTasks]);
 
-    const handleTaskClick = (task: ITask, boardId: string) => {
+    const handleTaskClick = useCallback((task: ITask, boardId: string) => {
         setSelectedTaskId(task._id.toString());
         setSelectedBoardId(boardId);
         setTaskModalOpen(true);
-    };
+    }, []);
 
-    const handleAddTask = (boardId: string) => {
+    const handleAddTask = useCallback((boardId: string) => {
         setAddTaskBoardId(boardId);
         setAddTaskDialogOpen(true);
-    };
+    }, []);
 
-    const getFilteredTasks = (tasks: ITask[]): ITask[] => {
+    const getFilteredTasks = useCallback((tasks: ITask[]): ITask[] => {
         if (visibilityFilter === "all") return tasks;
         return tasks.filter((t: any) => t.visibility === visibilityFilter);
-    };
+    }, [visibilityFilter]);
 
     return (
         <TooltipProvider>
@@ -157,10 +176,9 @@ export default function OverviewPage() {
                             size="sm"
                             className="h-8 gap-2 text-xs"
                             onClick={async () => {
-                                await fetchRecentBoards();
-                                const currentBoards = useBoardStore.getState().boards;
-                                if (currentBoards.length > 0) {
-                                    await fetchAllBoardTasks(currentBoards.map((b) => ({ id: b._id, date: b.date })));
+                                const refreshedBoards = await fetchRecentBoards();
+                                if (refreshedBoards && refreshedBoards.length > 0) {
+                                    await fetchAllBoardTasks(refreshedBoards.map((b: DailyBoard) => ({ id: b._id, date: b.date })));
                                 }
                             }}
                             disabled={isLoading}
